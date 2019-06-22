@@ -1,18 +1,39 @@
 import { Reducer } from 'redux'
-import { createAction, PayloadAction } from './createAction'
-import { createReducer, CaseReducers } from './createReducer'
+import {
+  createAction,
+  PayloadActionCreator,
+  PayloadAction
+} from './createAction'
+import {
+  createReducer,
+  CaseReducers,
+  EnhancedReducer,
+  isEnhancedReducer
+} from './createReducer'
 import { createSliceSelector, createSelectorName } from './sliceSelector'
 
 /**
  * An action creator atttached to a slice.
  */
-export type SliceActionCreator<P> = P extends void
+export type SliceActionCreator<P> = { type: string } & (P extends void
   ? () => PayloadAction<void>
-  : (payload: P) => PayloadAction<P>
+  : (payload: P) => PayloadAction<P>)
+
+export type MappedSliceActionCreator<P> = P extends EnhancedReducer
+  ? P['prepare'] extends (_: infer OP) => any
+    ? PayloadActionCreator<OP, any, P['prepare']>
+    : never
+  : P extends (state: any) => any
+  ? SliceActionCreator<void>
+  : P extends (state: any, action: infer Action) => any
+  ? Action extends { payload: infer Payload }
+    ? SliceActionCreator<Payload>
+    : never
+  : never
 
 export interface Slice<
   S = any,
-  AP extends { [key: string]: any } = { [key: string]: any }
+  Actions extends { [type: string]: PayloadActionCreator } = {}
 > {
   /**
    * The slice name.
@@ -28,7 +49,7 @@ export interface Slice<
    * Action creators for the types of actions that are handled by the slice
    * reducer.
    */
-  actions: { [type in keyof AP]: SliceActionCreator<AP[type]> }
+  actions: Actions
 
   /**
    * Selectors for the slice reducer state. `createSlice()` inserts a single
@@ -72,12 +93,8 @@ export interface CreateSliceOptions<
   extraReducers?: CaseReducers<S, any>
 }
 
-type CaseReducerActionPayloads<CR extends CaseReducers<any, any>> = {
-  [T in keyof CR]: CR[T] extends (state: any) => any
-    ? void
-    : (CR[T] extends (state: any, action: PayloadAction<infer P>) => any
-        ? P
-        : void)
+type MappedActions<CR extends CaseReducers<any, any>> = {
+  [T in keyof CR]: MappedSliceActionCreator<CR[T]>
 }
 
 function getType(slice: string, actionKey: string): string {
@@ -94,7 +111,7 @@ function getType(slice: string, actionKey: string): string {
  */
 export function createSlice<S, CR extends CaseReducers<S, any>>(
   options: CreateSliceOptions<S, CR>
-): Slice<S, CaseReducerActionPayloads<CR>> {
+): Slice<S, MappedActions<CR>> {
   const { slice = '', initialState } = options
   const reducers = options.reducers || {}
   const extraReducers = options.extraReducers || {}
@@ -110,7 +127,12 @@ export function createSlice<S, CR extends CaseReducers<S, any>>(
   const actionMap = actionKeys.reduce(
     (map, action) => {
       const type = getType(slice, action)
-      map[action] = createAction(type)
+      const reducer = reducers[action]
+      if (isEnhancedReducer(reducer)) {
+        map[action] = createAction(type, reducer.prepare)
+      } else {
+        map[action] = createAction(type)
+      }
       return map
     },
     {} as any

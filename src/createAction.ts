@@ -12,12 +12,37 @@ export interface PayloadAction<P = any, T extends string = string>
   payload: P
 }
 
+export type PayloadMetaAction<P = any, M = any, T extends string = string> = ([
+  M
+] extends [never]
+  ? {}
+  : { meta: M }) &
+  PayloadAction<P, T>
+
+export type PrepareAction<
+  OriginalPayload = any,
+  TargetPayload = OriginalPayload,
+  Meta = never
+> = (
+  payload: OriginalPayload
+) => [Meta] extends [never]
+  ? { payload: TargetPayload }
+  : { payload: TargetPayload; meta: Meta }
+
 /**
  * An action creator that produces actions with a `payload` attribute.
  */
-export interface PayloadActionCreator<P = any, T extends string = string> {
+export interface PayloadActionCreator<
+  P = any,
+  T extends string = string,
+  Prepare extends PrepareAction<P, any> = PrepareAction<P, P>
+> {
   (): Action<T>
-  (payload: P): PayloadAction<P, T>
+  (payload: P): Prepare extends PrepareAction<any, infer TP, infer M>
+    ? PayloadMetaAction<TP, M, T>
+    : Prepare extends PrepareAction<any, infer TP>
+    ? PayloadMetaAction<TP>
+    : never
   type: T
 }
 
@@ -30,12 +55,22 @@ export interface PayloadActionCreator<P = any, T extends string = string> {
  *
  * @param type The action type to use for created actions.
  */
-export function createAction<P = any, T extends string = string>(
-  type: T
-): PayloadActionCreator<P, T> {
-  function actionCreator(): Action<T>
-  function actionCreator(payload: P): PayloadAction<P, T>
-  function actionCreator(payload?: P): Action<T> | PayloadAction<P, T> {
+export function createAction<
+  P = any,
+  T extends string = string,
+  Prepare extends PrepareAction<P> = PrepareAction<P, P>
+>(type: T, prepareAction?: Prepare): PayloadActionCreator<P, T, Prepare> {
+  //function actionCreator(): Action<T>
+  //function actionCreator(payload: P): ActionTypeFor<Prepare, T>
+  function actionCreator(payload?: P): any {
+    if (prepareAction) {
+      return {
+        ...prepareAction(
+          payload! /* TODO: this does not match up with the current signature */
+        ),
+        type
+      }
+    }
     return { type, payload }
   }
 
@@ -43,7 +78,7 @@ export function createAction<P = any, T extends string = string>(
 
   actionCreator.type = type
 
-  return actionCreator
+  return actionCreator as any
 }
 
 /**

@@ -73,3 +73,38 @@ import {
   // typings:expect-error
   counter.actions.multiply('2')
 }
+
+/*
+ * Test: Slice action creator types are inferred for enhanced reducers.
+ */
+{
+  const counter = createSlice({
+    slice: 'counter',
+    initialState: 0,
+    reducers: {
+      strLen: {
+        reducer: s => s,
+        prepare: (payload: string) => ({
+          payload: payload.length
+        })
+      },
+      strLenMeta: {
+        reducer: s => s,
+        prepare: (payload: string) => ({
+          payload,
+          meta: payload.length
+        })
+      }
+    }
+  })
+
+  const n1: number = counter.actions.strLen('test').payload
+  const s1: string = counter.actions.strLenMeta('test').payload
+  const n2: number = counter.actions.strLenMeta('test').meta
+
+  // typings:expect-error
+  const s2: string = counter.actions.strLen('test').payload
+
+  // typings:expect-error
+  const s3: string = counter.actions.strLenMeta('test').meta
+}

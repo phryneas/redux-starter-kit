@@ -133,3 +133,30 @@ import {
   // typings:expect-error
   const q: number = increment(1).type
 }
+
+/*
+ * Test: changing payload type with prepareAction
+ */
+{
+  const strLenAction = createAction('strLen', (payload: string) => ({
+    payload: payload.length
+  }))
+  const n: number = strLenAction('test').payload
+
+  // typings:expect-error
+  const r: string = strLenAction('test').payload
+}
+
+/*
+ * Test: adding metadata with prepareAction
+ */
+{
+  const strLenMetaAction = createAction('strLenMeta', (payload: string) => ({
+    payload,
+    meta: payload.length
+  }))
+  const n: number = strLenMetaAction('test').meta
+
+  // typings:expect-error
+  const r: string = strLenMetaAction('test').meta
+}

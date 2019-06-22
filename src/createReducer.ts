@@ -1,6 +1,6 @@
 import createNextState, { Draft } from 'immer'
 import { AnyAction, Action, Reducer } from 'redux'
-
+import { PrepareAction } from './createAction'
 /**
  * Defines a mapping from action types to corresponding action object shapes.
  */
@@ -25,11 +25,28 @@ export type CaseReducer<S = any, A extends Action = AnyAction> = (
   action: A
 ) => S | void
 
+export type EnhancedReducer<
+  S = any,
+  A extends Action = AnyAction,
+  P extends PrepareAction = PrepareAction
+> = {
+  reducer: CaseReducer<S, A>
+  prepare: P
+}
+
+export function isEnhancedReducer(
+  caseReducer: CaseReducer | EnhancedReducer | void
+): caseReducer is EnhancedReducer {
+  return !!caseReducer && 'reducer' in caseReducer
+}
+
 /**
  * A mapping from action types to case reducers for `createReducer()`.
  */
 export type CaseReducers<S, AS extends Actions> = {
-  [T in keyof AS]: AS[T] extends Action ? CaseReducer<S, AS[T]> : void
+  [T in keyof AS]: AS[T] extends Action
+    ? CaseReducer<S, AS[T]> | EnhancedReducer<S, AS[T]>
+    : void
 }
 
 /**
@@ -58,7 +75,12 @@ export function createReducer<
     // these two types.
     return createNextState(state, (draft: Draft<S>): any => {
       const caseReducer = actionsMap[action.type]
-      return caseReducer ? caseReducer(draft, action) : undefined
+
+      return !caseReducer
+        ? undefined
+        : typeof caseReducer === 'function'
+        ? caseReducer(draft, action)
+        : caseReducer.reducer(draft, action)
     })
   }
 }
