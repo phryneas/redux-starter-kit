@@ -36,12 +36,9 @@ type CreatedMetaAction<M, T extends string> = IsAny<M> extends true
   ? Action<T>
   : MetaAction<M, T>
 
-type CreatedAction<P, M, T extends string> = CreatedPayloadAction<P, T> &
+// @internal
+export type CreatedAction<P, M, T extends string> = CreatedPayloadAction<P, T> &
   CreatedMetaAction<M, T>
-
-export type X = CreatedPayloadAction<any, string>
-export type Y = CreatedPayloadAction<void, string>
-export type Z = CreatedPayloadAction<string, string>
 
 /**
  * An action creator that produces actions with a `payload` attribute.
@@ -56,8 +53,8 @@ export type PayloadActionCreator<
   type: T
 }
 
-type PayloadCreator<A extends any[] = [any], P = any> = (...args: A) => P
-type MetaCreator<A extends any[] = [any], M = any> = (...args: A) => M
+export type PayloadCreator<A extends any[] = [any], P = any> = (...args: A) => P
+export type MetaCreator<A extends any[] = [any], M = any> = (...args: A) => M
 
 /**
  * A utility function to create an action creator for the given action type

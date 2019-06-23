@@ -1,6 +1,13 @@
 import { Reducer } from 'redux'
-import { createAction, PayloadAction } from './createAction'
-import { createReducer, CaseReducers } from './createReducer'
+import {
+  createAction,
+  PayloadAction,
+  CreatedAction,
+  PayloadCreator,
+  MetaCreator,
+  PayloadActionCreator
+} from './createAction'
+import { createReducer, CaseReducers, CaseReducer } from './createReducer'
 import { createSliceSelector, createSelectorName } from './sliceSelector'
 
 /**
@@ -12,7 +19,7 @@ export type SliceActionCreator<P> = P extends void
 
 export interface Slice<
   S = any,
-  AP extends { [key: string]: any } = { [key: string]: any }
+  AC extends CaseReducerActionCreators<any> = any
 > {
   /**
    * The slice name.
@@ -28,7 +35,7 @@ export interface Slice<
    * Action creators for the types of actions that are handled by the slice
    * reducer.
    */
-  actions: { [type in keyof AP]: SliceActionCreator<AP[type]> }
+  actions: AC
 
   /**
    * Selectors for the slice reducer state. `createSlice()` inserts a single
@@ -39,12 +46,44 @@ export interface Slice<
   selectors: { [key: string]: (state: any) => S }
 }
 
+interface ComplexReducerDefinition<
+  S,
+  T extends string = string,
+  A extends any[] = [any],
+  P = A[0],
+  M = void
+> {
+  reducer: CaseReducer<S, CreatedAction<P, M, T>>
+  payloadCreator?: PayloadCreator<A, P>
+  metaCreator?: MetaCreator<A, M>
+}
+
+type ActionForComplexReducer<
+  D extends ComplexReducerDefinition<any, string, any, any, any>,
+  T extends string = string
+> = D['payloadCreator'] extends (...args: infer A) => infer P
+  ? (D['metaCreator'] extends (...args: any) => infer M
+      ? PayloadActionCreator<P, T, A, M>
+      : PayloadActionCreator<P, T, A>)
+  : Parameters<D['reducer']>[1] extends { payload: infer P }
+  ? (D['metaCreator'] extends (...args: any) => infer M
+      ? PayloadActionCreator<P, T, [P], M>
+      : PayloadActionCreator<P, T, [P]>)
+  : (D['metaCreator'] extends (...args: infer A) => infer M
+      ? PayloadActionCreator<A[0], T, A, M>
+      : PayloadActionCreator<void, T, [void?]>)
+
+type SliceReducers<S> = Record<
+  string,
+  CaseReducer<S, any> | ComplexReducerDefinition<S, string, any, any, any>
+>
+
 /**
  * Options for `createSlice()`.
  */
 export interface CreateSliceOptions<
   S = any,
-  CR extends CaseReducers<S, any> = CaseReducers<S, any>
+  SR extends SliceReducers<S> = SliceReducers<S>
 > {
   /**
    * The slice's name. Used to namespace the generated action types and to
@@ -62,7 +101,7 @@ export interface CreateSliceOptions<
    * functions. For every action type, a matching action creator will be
    * generated using `createAction()`.
    */
-  reducers: CR
+  reducers: SR
 
   /**
    * A mapping from action types to action-type-specific *case reducer*
@@ -72,12 +111,24 @@ export interface CreateSliceOptions<
   extraReducers?: CaseReducers<S, any>
 }
 
-type CaseReducerActionPayloads<CR extends CaseReducers<any, any>> = {
-  [T in keyof CR]: CR[T] extends (state: any) => any
-    ? void
-    : (CR[T] extends (state: any, action: PayloadAction<infer P>) => any
-        ? P
-        : void)
+type ActionFor<
+  S,
+  T extends string,
+  R extends
+    | CaseReducer<S, any>
+    | ComplexReducerDefinition<S, string, any, any, any>
+> = R extends ComplexReducerDefinition<any, string, any, any, any>
+  ? ActionForComplexReducer<R, T>
+  : (R extends (state: any) => any
+      ? PayloadActionCreator<void, T>
+      : R extends (state: any, action: PayloadAction<infer P>) => any
+      ? PayloadActionCreator<P, T>
+      : PayloadActionCreator<void, T>)
+
+type CaseReducerActionCreators<SR extends SliceReducers<any>> = {
+  [T in keyof SR]: T extends string
+    ? ActionFor<any, T, SR[T]>
+    : ActionFor<any, string, SR[T]>
 }
 
 function getType(slice: string, actionKey: string): string {
@@ -92,16 +143,18 @@ function getType(slice: string, actionKey: string): string {
  *
  * The `reducer` argument is passed to `createReducer()`.
  */
-export function createSlice<S, CR extends CaseReducers<S, any>>(
+export function createSlice<S, CR extends SliceReducers<S>>(
   options: CreateSliceOptions<S, CR>
-): Slice<S, CaseReducerActionPayloads<CR>> {
+): Slice<S, CaseReducerActionCreators<CR>> {
   const { slice = '', initialState } = options
   const reducers = options.reducers || {}
   const extraReducers = options.extraReducers || {}
   const actionKeys = Object.keys(reducers)
 
   const reducerMap = actionKeys.reduce((map, actionKey) => {
-    map[getType(slice, actionKey)] = reducers[actionKey]
+    const reducer = reducers[actionKey]
+    map[getType(slice, actionKey)] =
+      typeof reducer === 'function' ? reducer : reducer.reducer
     return map
   }, extraReducers)
 
@@ -110,7 +163,16 @@ export function createSlice<S, CR extends CaseReducers<S, any>>(
   const actionMap = actionKeys.reduce(
     (map, action) => {
       const type = getType(slice, action)
-      map[action] = createAction(type)
+      const reducer = reducers[action]
+      if (typeof reducer === 'function') {
+        map[action] = createAction(type)
+      } else {
+        map[action] = createAction(
+          type,
+          reducer.payloadCreator,
+          reducer.metaCreator
+        )
+      }
       return map
     },
     {} as any
