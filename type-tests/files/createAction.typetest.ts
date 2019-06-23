@@ -49,29 +49,7 @@ import {
 
 /* PayloadActionCreator */
 
-/*
- * Test: PayloadActionCreator returns Action or PayloadAction depending
- * on whether a payload is passed.
- */
-{
-  const actionCreator: PayloadActionCreator = Object.assign(
-    (payload?: number) => ({
-      type: 'action',
-      payload
-    }),
-    { type: 'action' }
-  )
-
-  let action: Action
-  let payloadAction: PayloadAction
-
-  action = actionCreator()
-  action = actionCreator(1)
-  payloadAction = actionCreator(1)
-
-  // typings:expect-error
-  payloadAction = actionCreator()
-}
+// removed test - this simply does not hold true any more as the payload creator could change this. I do not think this is worth typing.
 
 /*
  * Test: PayloadActionCreator is compatible with ActionCreator.
@@ -116,7 +94,7 @@ import {
  * Test: createAction() type parameter is optional (defaults to `any`).
  */
 {
-  const increment = createAction('increment')
+  const increment = createAction('increment', (x: any) => x)
   const n: number = increment(1).payload
   const s: string = increment(1).payload
 }
@@ -132,4 +110,37 @@ import {
   const r: 'other' = increment(1).type
   // typings:expect-error
   const q: number = increment(1).type
+}
+
+/*
+ * Test: changing payload type with prepareAction
+ */
+{
+  const strLenAction = createAction(
+    'strLen',
+    (payload: string) => payload.length
+  )
+  const n: number = strLenAction('test').payload
+
+  // typings:expect-error
+  const r: string = strLenAction('test').payload
+
+  // typings:expect-error
+  strLenAction('test').meta
+}
+
+/*
+ * Test: adding metadata with prepareAction
+ */
+{
+  const strLenMetaAction = createAction(
+    'strLenMeta',
+    undefined,
+    (payload: string) => payload.length
+  )
+  const s: string = strLenMetaAction('test').payload
+  const n: number = strLenMetaAction('test').meta
+
+  // typings:expect-error
+  const r: string = strLenMetaAction('test').meta
 }
