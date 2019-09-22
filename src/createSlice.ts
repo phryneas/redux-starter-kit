@@ -19,16 +19,11 @@ export type SliceActionCreator<P> = PayloadActionCreator<P>
 export interface Slice<
   State = any,
   ActionCreators extends { [key: string]: any } = { [key: string]: any }
-> {
+> extends Reducer<State> {
   /**
    * The slice name.
    */
   name: string
-
-  /**
-   * The slice's reducer.
-   */
-  reducer: Reducer<State>
 
   /**
    * Action creators for the types of actions that are handled by the slice
@@ -198,9 +193,9 @@ export function createSlice<
     {} as any
   )
 
-  return {
-    name,
-    reducer,
+  Object.defineProperty(reducer, 'name', { value: name, writable: false })
+
+  return Object.assign(reducer, {
     actions: actionMap
-  }
+  })
 }

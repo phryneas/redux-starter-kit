@@ -35,12 +35,17 @@ describe('createSlice', () => {
   })
 
   describe('when passing slice', () => {
-    const { actions, reducer } = createSlice({
+    const reducer = createSlice({
       reducers: {
         increment: state => state + 1
       },
       initialState: 0,
       name: 'cool'
+    })
+    const { actions } = reducer
+
+    it('should have the correct name', () => {
+      expect(reducer.name).toBe('cool')
     })
 
     it('should create increment action', () => {
@@ -62,7 +67,7 @@ describe('createSlice', () => {
   describe('when mutating state object', () => {
     const initialState = { user: '' }
 
-    const { actions, reducer } = createSlice({
+    const reducer = createSlice({
       reducers: {
         setUserName: (state, action) => {
           state.user = action.payload
@@ -71,6 +76,7 @@ describe('createSlice', () => {
       initialState,
       name: 'user'
     })
+    const { actions } = reducer
 
     it('should set the username', () => {
       expect(reducer(initialState, actions.setUserName('eric'))).toEqual({
@@ -82,7 +88,7 @@ describe('createSlice', () => {
   describe('when passing extra reducers', () => {
     const addMore = createAction('ADD_MORE')
 
-    const { reducer } = createSlice({
+    const reducer = createSlice({
       name: 'test',
       reducers: {
         increment: state => state + 1,
@@ -137,7 +143,7 @@ describe('createSlice', () => {
         }
       })
 
-      testSlice.reducer(0, testSlice.actions.testReducer('testPayload'))
+      testSlice(0, testSlice.actions.testReducer('testPayload'))
       expect(reducer).toHaveBeenCalledWith(
         0,
         expect.objectContaining({ payload: 'testPayload' })

@@ -26,12 +26,12 @@ function expectType<T>(t: T) {
 
   /* Reducer */
 
-  const reducer: Reducer<number, PayloadAction> = slice.reducer
+  const reducer: Reducer<number, PayloadAction> = slice
 
   // typings:expect-error
-  const stringReducer: Reducer<string, PayloadAction> = slice.reducer
+  const stringReducer: Reducer<string, PayloadAction> = slice
   // typings:expect-error
-  const anyActionReducer: Reducer<string, AnyAction> = slice.reducer
+  const anyActionReducer: Reducer<string, AnyAction> = slice
 
   /* Actions */
 

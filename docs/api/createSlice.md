@@ -69,12 +69,11 @@ to force the TS compiler to accept the computed property.)
 
 ## Return Value
 
-`createSlice` will return an object that looks like:
+`createSlice` will return a reducer function with these additional properties:
 
 ```ts
 {
     name : string,
-    reducer : ReducerFunction,
     actions : Object<string, ActionCreator},
 }
 ```
@@ -82,7 +81,7 @@ to force the TS compiler to accept the computed property.)
 Each function defined in the `reducers` argument will have a corresponding action creator generated using [`createAction`](./createAction.md)
 and included in the result's `actions` field using the same function name.
 
-The generated `reducer` function is suitable for passing to the Redux `combineReducers` function as a "slice reducer".
+The generated function is suitable for passing to the Redux `combineReducers` function as a "slice reducer".
 
 You may want to consider destructuring the action creators and exporting them individually, for ease of searching
 for references in a larger codebase.
@@ -129,8 +128,8 @@ const user = createSlice({
 })
 
 const reducer = combineReducers({
-  counter: counter.reducer,
-  user: user.reducer
+  counter,
+  user
 })
 
 const store = createStore(reducer)
