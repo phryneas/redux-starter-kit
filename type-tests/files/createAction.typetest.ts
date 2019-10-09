@@ -105,8 +105,13 @@ function expectType<T>(p: T): T {
   const increment = createAction<number, 'increment'>('increment')
   const n: number = increment(1).payload
 
+  // require an argument
   // typings:expect-error
-  increment('').payload
+  increment()
+
+  // argument must be of type number
+  // typings:expect-error
+  increment('')
 }
 
 /*
