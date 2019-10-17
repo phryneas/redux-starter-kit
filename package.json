@@ -10,6 +10,7 @@
   "author": "Mark Erikson <mark@isquaredsoftware.com>",
   "license": "MIT",
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.5.0",
     "@types/jest": "^24.0.11",
     "@types/node": "^10.14.4",
     "@types/redux-immutable-state-invariant": "^2.1.1",
@@ -23,7 +24,7 @@
     "typings-tester": "^0.3.2"
   },
   "scripts": {
-    "build": "tsdx build --format cjs,esm,umd",
+    "build": "tsdx build --format cjs,esm,umd; api-extractor run; mv dist/rollup.d.ts dist/typings.d.ts",
     "dev": "tsdx watch  --format cjs,esm,umd",
     "format": "prettier --write \"src/*.ts\" \"**/*.md\"",
     "format:check": "prettier --list-different \"src/*.ts\" \"**/*.md\"",
@@ -32,7 +33,9 @@
     "test": "tsdx test"
   },
   "files": [
-    "dist",
+    "dist/*.js",
+    "dist/*.js.map",
+    "dist/typings.d.ts",
     "src"
   ],
   "dependencies": {
