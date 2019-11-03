@@ -12,14 +12,16 @@ import {
   Store,
   DeepPartial
 } from 'redux'
-import {
-  composeWithDevTools,
-  EnhancerOptions as DevToolsOptions
-} from 'redux-devtools-extension'
 import { ThunkDispatch } from 'redux-thunk'
 
 import isPlainObject from './isPlainObject'
 import { getDefaultMiddleware } from './getDefaultMiddleware'
+
+declare global {
+  interface Window {
+    __REDUX_DEVTOOLS_EXTENSION_COMPOSE__: typeof import('redux-devtools-extension').composeWithDevTools
+  }
+}
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
@@ -48,7 +50,7 @@ export interface ConfigureStoreOptions<S = any, A extends Action = AnyAction> {
    *
    * Additional configuration can be done by passing Redux DevTools options
    */
-  devTools?: boolean | DevToolsOptions
+  devTools?: boolean | import('redux-devtools-extension').EnhancerOptions
 
   /**
    * The initial state, same as Redux's createStore.
@@ -117,8 +119,8 @@ export function configureStore<S = any, A extends Action = AnyAction>(
 
   let finalCompose = compose
 
-  if (devTools) {
-    finalCompose = composeWithDevTools({
+  if (devTools && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) {
+    finalCompose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
       // Enable capture of stack traces for dispatched Redux actions
       trace: !IS_PRODUCTION,
       ...(typeof devTools === 'object' && devTools)
