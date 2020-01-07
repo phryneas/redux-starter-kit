@@ -1,9 +1,18 @@
-import createNextState, { Draft } from 'immer'
+import createNextState from 'immer'
 import { AnyAction, Action, Reducer } from 'redux'
 import {
   executeReducerBuilderCallback,
   ActionReducerMapBuilder
 } from './mapBuilders'
+
+/**
+ * This is a slightly less verbose version of `Draft` than the original
+ * `immer` implementation.
+ * This implementation works better when T is an unresolved generic type.
+ */
+export type Draft<T> = {
+  -readonly [K in keyof T]: Draft<T[K]>
+}
 
 /**
  * Defines a mapping from action types to corresponding action object shapes.
