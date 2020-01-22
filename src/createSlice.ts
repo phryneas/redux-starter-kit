@@ -1,4 +1,4 @@
-import { Reducer } from 'redux'
+import { Reducer, AnyAction } from 'redux'
 import {
   createAction,
   PayloadAction,
@@ -12,6 +12,24 @@ import {
   ActionReducerMapBuilder,
   executeReducerBuilderCallback
 } from './mapBuilders'
+
+declare const sliceSymbol: unique symbol
+declare const typeSymbol: unique symbol
+
+type SlicePayloadActionCreator<
+  SliceName extends string,
+  TypeName,
+  ActionCreator
+> = ActionCreator extends (...args: infer Args) => any
+  ? (
+      ...args: Args
+    ) => SlicePayloadAction<SliceName, TypeName> & ReturnType<ActionCreator>
+  : ActionCreator
+
+interface SlicePayloadAction<SliceName extends string, TypeName> {
+  [sliceSymbol]: SliceName
+  [typeSymbol]: TypeName
+}
 
 /**
  * An action creator atttached to a slice.
@@ -29,12 +47,13 @@ export type SliceActionCreator<P> = PayloadActionCreator<P>
  */
 export interface Slice<
   State = any,
-  CaseReducers extends SliceCaseReducers<State> = SliceCaseReducers<State>
+  CaseReducers extends SliceCaseReducers<State> = SliceCaseReducers<State>,
+  Name extends string = string
 > {
   /**
    * The slice name.
    */
-  name: string
+  name: Name
 
   /**
    * The slice's reducer.
@@ -45,7 +64,7 @@ export interface Slice<
    * Action creators for the types of actions that are handled by the slice
    * reducer.
    */
-  actions: CaseReducerActions<CaseReducers>
+  actions: CaseReducerActions<CaseReducers, Name>
 
   /**
    * The individual case reducer functions that were passed in the `reducers` parameter.
@@ -61,12 +80,13 @@ export interface Slice<
  */
 export interface CreateSliceOptions<
   State = any,
-  CR extends SliceCaseReducers<State> = SliceCaseReducers<State>
+  CR extends SliceCaseReducers<State> = SliceCaseReducers<State>,
+  Name extends string = string
 > {
   /**
    * The slice's name. Used to namespace the generated action types.
    */
-  name: string
+  name: Name
 
   /**
    * The initial state to be returned by the slice reducer.
@@ -118,10 +138,17 @@ export type SliceCaseReducers<State> = {
  *
  * @public
  */
-export type CaseReducerActions<CaseReducers extends SliceCaseReducers<any>> = {
-  [Type in keyof CaseReducers]: CaseReducers[Type] extends { prepare: any }
-    ? ActionCreatorForCaseReducerWithPrepare<CaseReducers[Type]>
-    : ActionCreatorForCaseReducer<CaseReducers[Type]>
+export type CaseReducerActions<
+  CaseReducers extends SliceCaseReducers<any>,
+  SliceName extends string
+> = {
+  [Type in keyof CaseReducers]: SlicePayloadActionCreator<
+    SliceName,
+    Type,
+    CaseReducers[Type] extends { prepare: any }
+      ? ActionCreatorForCaseReducerWithPrepare<CaseReducers[Type]>
+      : ActionCreatorForCaseReducer<CaseReducers[Type]>
+  >
 }
 
 /**
@@ -212,10 +239,11 @@ function getType(slice: string, actionKey: string): string {
  */
 export function createSlice<
   State,
-  CaseReducers extends SliceCaseReducers<State>
+  CaseReducers extends SliceCaseReducers<State>,
+  Name extends string
 >(
-  options: CreateSliceOptions<State, CaseReducers>
-): Slice<State, CaseReducers> {
+  options: CreateSliceOptions<State, CaseReducers, Name>
+): Slice<State, CaseReducers, Name> {
   const { name, initialState } = options
   if (!name) {
     throw new Error('`name` is a required option for createSlice')
@@ -265,3 +293,28 @@ export function createSlice<
     caseReducers: sliceCaseReducersByName as any
   }
 }
+
+let slice = createSlice({
+  name: 'test',
+  initialState: 0,
+  reducers: {
+    increment(state, action: PayloadAction<number>) {
+      return state + action.payload
+    },
+    decrement(state, action: PayloadAction<number>) {
+      return state + action.payload
+    }
+  }
+})
+
+/*
+const action: SlicePayloadAction<"test", "increment", {
+    payload: number;
+    type: string;
+}>
+*/
+const action = slice.actions.increment(5)
+
+type ActionTypes = ReturnType<
+  (typeof slice.actions)[keyof typeof slice.actions]
+>
