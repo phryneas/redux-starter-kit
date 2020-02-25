@@ -29,12 +29,29 @@ export interface SerializedError {
   code?: string
 }
 
-const commonProperties: (keyof SerializedError)[] = [
+const commonProperties: Array<keyof SerializedError> = [
   'name',
   'message',
   'stack',
   'code'
 ]
+
+const rejectionSymbol: unique symbol = Symbol('rejectWithValue')
+type RejectWithValue<RejectValue> = {
+  [rejectionSymbol]: 'reject'
+  value: RejectValue
+}
+function rejectWithValue<RejectValue>(
+  value: RejectValue
+): RejectWithValue<RejectValue> {
+  return {
+    [rejectionSymbol]: 'reject',
+    value
+  }
+}
+function isRejectWithValue(value: any): value is RejectWithValue<unknown> {
+  return value && value[rejectionSymbol] === 'reject'
+}
 
 // Reworked from https://github.com/sindresorhus/serialize-error
 export const miniSerializeError = (value: any): any => {
@@ -56,6 +73,7 @@ type AsyncThunkConfig = {
   state?: unknown
   dispatch?: Dispatch
   extra?: unknown
+  rejectValue?: unknown
 }
 
 type GetState<ThunkApiConfig> = ThunkApiConfig extends {
@@ -84,6 +102,11 @@ type GetThunkAPI<ThunkApiConfig> = BaseThunkAPI<
   GetExtra<ThunkApiConfig>,
   GetDispatch<ThunkApiConfig>
 >
+type GetRejectValue<ThunkApiConfig> = ThunkApiConfig extends {
+  rejectValue: infer RejectValue
+}
+  ? RejectValue
+  : undefined
 
 /**
  *
@@ -101,8 +124,14 @@ export function createAsyncThunk<
   payloadCreator: (
     arg: ThunkArg,
     thunkAPI: GetThunkAPI<ThunkApiConfig>
-  ) => Promise<Returned> | Returned
+  ) =>
+    | Promise<Returned>
+    | Returned
+    | Promise<RejectWithValue<GetRejectValue<ThunkApiConfig>>>
+    | RejectWithValue<GetRejectValue<ThunkApiConfig>>
 ) {
+  type RejectedValue = GetRejectValue<ThunkApiConfig>
+
   const fulfilled = createAction(
     type + '/fulfilled',
     (result: Returned, requestId: string, arg: ThunkArg) => {
@@ -125,10 +154,15 @@ export function createAsyncThunk<
 
   const rejected = createAction(
     type + '/rejected',
-    (error: Error, requestId: string, arg: ThunkArg) => {
+    (
+      error: Error | null,
+      requestId: string,
+      arg: ThunkArg,
+      payload?: RejectedValue
+    ) => {
       const aborted = error && error.name === 'AbortError'
       return {
-        payload: undefined,
+        payload,
         error: miniSerializeError(error),
         meta: {
           arg,
@@ -175,7 +209,12 @@ export function createAsyncThunk<
                 requestId,
                 signal: abortController.signal
               })
-            ).then(result => fulfilled(result, requestId, arg))
+            ).then(result => {
+              if (isRejectWithValue(result)) {
+                return rejected(null, requestId, arg, result.value)
+              }
+              return fulfilled(result, requestId, arg)
+            })
           ])
         } catch (err) {
           finalAction = rejected(err, requestId, arg)
@@ -198,6 +237,7 @@ export function createAsyncThunk<
     fulfilled
   })
 }
+createAsyncThunk.rejectWithValue = rejectWithValue
 
 /**
  * @alpha

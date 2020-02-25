@@ -1,6 +1,5 @@
 import { createAsyncThunk, Dispatch, createReducer, AnyAction } from 'src'
 import { ThunkDispatch } from 'redux-thunk'
-import { promises } from 'fs'
 import { unwrapResult } from 'src/createAsyncThunk'
 
 function expectType<T>(t: T) {
@@ -97,4 +96,29 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   correctDispatch(fetchBooksTAC(1))
   // typings:expect-error
   defaultDispatch(fetchBooksTAC(1))
+})()
+/**
+ * returning a rejected action from the promise creator is possible
+ */
+;(async () => {
+  type ReturnValue = { data: 'success' }
+  type RejectValue = { data: 'error' }
+
+  const fetchBooksTAC = createAsyncThunk<
+    ReturnValue,
+    number,
+    {
+      rejectValue: RejectValue
+    }
+  >('books/fetch', async arg => {
+    return createAsyncThunk.rejectWithValue<RejectValue>({ data: 'error' })
+  })
+
+  const returned = await defaultDispatch(fetchBooksTAC(1))
+  if (fetchBooksTAC.rejected.match(returned)) {
+    expectType<undefined | RejectValue>(returned.payload)
+    expectType<RejectValue>(returned.payload!)
+  } else {
+    expectType<ReturnValue>(returned.payload)
+  }
 })()
