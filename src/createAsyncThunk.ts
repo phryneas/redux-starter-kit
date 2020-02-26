@@ -11,12 +11,18 @@ import { FallbackIfUnknown } from './tsHelpers'
 // @ts-ignore we need the import of these types due to a bundling issue.
 type _Keep = PayloadAction | ActionCreatorWithPreparedPayload<any, unknown>
 
-export type BaseThunkAPI<S, E, D extends Dispatch = Dispatch> = {
+export type BaseThunkAPI<
+  S,
+  E,
+  D extends Dispatch = Dispatch,
+  RejectedValue = undefined
+> = {
   dispatch: D
   getState: () => S
   extra: E
   requestId: string
   signal: AbortSignal
+  rejectWithValue(value: RejectedValue): RejectWithValue<RejectedValue>
 }
 
 /**
@@ -36,21 +42,8 @@ const commonProperties: Array<keyof SerializedError> = [
   'code'
 ]
 
-const rejectionSymbol: unique symbol = Symbol('rejectWithValue')
-type RejectWithValue<RejectValue> = {
-  [rejectionSymbol]: 'reject'
-  value: RejectValue
-}
-function rejectWithValue<RejectValue>(
-  value: RejectValue
-): RejectWithValue<RejectValue> {
-  return {
-    [rejectionSymbol]: 'reject',
-    value
-  }
-}
-function isRejectWithValue(value: any): value is RejectWithValue<unknown> {
-  return value && value[rejectionSymbol] === 'reject'
+class RejectWithValue<RejectValue> {
+  constructor(public readonly value: RejectValue) {}
 }
 
 // Reworked from https://github.com/sindresorhus/serialize-error
@@ -100,13 +93,15 @@ type GetDispatch<ThunkApiConfig> = ThunkApiConfig extends {
 type GetThunkAPI<ThunkApiConfig> = BaseThunkAPI<
   GetState<ThunkApiConfig>,
   GetExtra<ThunkApiConfig>,
-  GetDispatch<ThunkApiConfig>
+  GetDispatch<ThunkApiConfig>,
+  GetRejectValue<ThunkApiConfig>
 >
+
 type GetRejectValue<ThunkApiConfig> = ThunkApiConfig extends {
   rejectValue: infer RejectValue
 }
   ? RejectValue
-  : undefined
+  : unknown
 
 /**
  *
@@ -163,7 +158,7 @@ export function createAsyncThunk<
       const aborted = error && error.name === 'AbortError'
       return {
         payload,
-        error: miniSerializeError(error),
+        error: miniSerializeError(error) || { message: 'Rejected' },
         meta: {
           arg,
           requestId,
@@ -207,10 +202,13 @@ export function createAsyncThunk<
                 getState,
                 extra,
                 requestId,
-                signal: abortController.signal
+                signal: abortController.signal,
+                rejectWithValue(value: RejectedValue) {
+                  return new RejectWithValue(value)
+                }
               })
             ).then(result => {
-              if (isRejectWithValue(result)) {
+              if (result instanceof RejectWithValue) {
                 return rejected(null, requestId, arg, result.value)
               }
               return fulfilled(result, requestId, arg)
@@ -237,16 +235,24 @@ export function createAsyncThunk<
     fulfilled
   })
 }
-createAsyncThunk.rejectWithValue = rejectWithValue
+
+type ActionTypesWithOptionalErrorAction =
+  | { error: any }
+  | { error?: never; payload: any }
+type PayloadForActionTypesExcludingErrorActions<T> = T extends { error: any }
+  ? never
+  : T extends { payload: infer P }
+  ? P
+  : never
 
 /**
  * @alpha
  */
-export function unwrapResult<T>(
-  returned: { error: any } | { payload: NonNullable<T> }
-): NonNullable<T> {
+export function unwrapResult<R extends ActionTypesWithOptionalErrorAction>(
+  returned: R
+): PayloadForActionTypesExcludingErrorActions<R> {
   if ('error' in returned) {
     throw returned.error
   }
-  return returned.payload
+  return (returned as any).payload
 }

@@ -24,7 +24,7 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
       })
       .addCase(async.rejected, (_, action) => {
         expectType<ReturnType<typeof async['rejected']>>(action)
-        expectType<Error>(action.error)
+        expectType<Partial<Error> | undefined>(action.error)
       })
   )
 
@@ -110,8 +110,8 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     {
       rejectValue: RejectValue
     }
-  >('books/fetch', async arg => {
-    return createAsyncThunk.rejectWithValue<RejectValue>({ data: 'error' })
+  >('books/fetch', async (arg, { rejectWithValue }) => {
+    return rejectWithValue({ data: 'error' })
   })
 
   const returned = await defaultDispatch(fetchBooksTAC(1))

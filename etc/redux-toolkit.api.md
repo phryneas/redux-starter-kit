@@ -128,12 +128,6 @@ export function createAsyncThunk<Returned, ThunkArg = void, ThunkApiConfig exten
     }>;
 };
 
-// @public (undocumented)
-export namespace createAsyncThunk {
-    var // (undocumented)
-    rejectWithValue: <RejectValue>(value: RejectValue) => RejectWithValue<RejectValue>;
-}
-
 // @alpha (undocumented)
 export function createEntityAdapter<T>(options?: {
     selectId?: IdSelector<T>;
@@ -290,11 +284,7 @@ export type SliceCaseReducers<State> = {
 export { ThunkAction }
 
 // @alpha (undocumented)
-export function unwrapResult<T>(returned: {
-    error: any;
-} | {
-    payload: NonNullable<T>;
-}): NonNullable<T>;
+export function unwrapResult<R extends ActionTypesWithOptionalErrorAction>(returned: R): PayloadForActionTypesExcludingErrorActions<R>;
 
 // @alpha (undocumented)
 export type Update<T> = {
