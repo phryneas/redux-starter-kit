@@ -120,9 +120,8 @@ export function createAsyncThunk<
     arg: ThunkArg,
     thunkAPI: GetThunkAPI<ThunkApiConfig>
   ) =>
-    | Promise<Returned>
+    | Promise<Returned | RejectWithValue<GetRejectValue<ThunkApiConfig>>>
     | Returned
-    | Promise<RejectWithValue<GetRejectValue<ThunkApiConfig>>>
     | RejectWithValue<GetRejectValue<ThunkApiConfig>>
 ) {
   type RejectedValue = GetRejectValue<ThunkApiConfig>
