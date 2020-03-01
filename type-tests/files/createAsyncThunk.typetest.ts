@@ -157,7 +157,7 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
         // let it be handled as any other unknown error
         throw err
       }
-      return rejectWithValue(error.response?.data)
+      return rejectWithValue(error.response && error.response.data)
     }
   })
 
