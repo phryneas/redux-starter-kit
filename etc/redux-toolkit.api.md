@@ -109,7 +109,7 @@ export function createAsyncThunk<Returned, ThunkArg = void, ThunkApiConfig exten
 }, never> | PayloadAction<GetRejectValue<ThunkApiConfig> | undefined, string, {
     arg: ThunkArg;
     requestId: string;
-    aborted: boolean | null;
+    aborted: boolean;
 }, SerializedError>> & {
     abort: (reason?: string | undefined) => void;
 }) & {
@@ -120,7 +120,7 @@ export function createAsyncThunk<Returned, ThunkArg = void, ThunkApiConfig exten
     rejected: ActionCreatorWithPreparedPayload<[Error | null, string, ThunkArg, (GetRejectValue<ThunkApiConfig> | undefined)?], GetRejectValue<ThunkApiConfig> | undefined, string, SerializedError, {
         arg: ThunkArg;
         requestId: string;
-        aborted: boolean | null;
+        aborted: boolean;
     }>;
     fulfilled: ActionCreatorWithPreparedPayload<[Returned, string, ThunkArg], Returned, string, never, {
         arg: ThunkArg;
