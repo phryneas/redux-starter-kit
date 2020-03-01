@@ -110,14 +110,14 @@ export function createAsyncThunk<Returned, ThunkArg = void, ThunkApiConfig exten
     arg: ThunkArg;
     requestId: string;
     aborted: boolean | null;
-}, any>> & {
+}, SerializedError>> & {
     abort: (reason?: string | undefined) => void;
 }) & {
     pending: ActionCreatorWithPreparedPayload<[string, ThunkArg], undefined, string, never, {
         arg: ThunkArg;
         requestId: string;
     }>;
-    rejected: ActionCreatorWithPreparedPayload<[Error | null, string, ThunkArg, (GetRejectValue<ThunkApiConfig> | undefined)?], GetRejectValue<ThunkApiConfig> | undefined, string, any, {
+    rejected: ActionCreatorWithPreparedPayload<[Error | null, string, ThunkArg, (GetRejectValue<ThunkApiConfig> | undefined)?], GetRejectValue<ThunkApiConfig> | undefined, string, SerializedError, {
         arg: ThunkArg;
         requestId: string;
         aborted: boolean | null;

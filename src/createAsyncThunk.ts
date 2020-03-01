@@ -47,7 +47,7 @@ class RejectWithValue<RejectValue> {
 }
 
 // Reworked from https://github.com/sindresorhus/serialize-error
-export const miniSerializeError = (value: any): any => {
+export const miniSerializeError = (value: any): SerializedError => {
   if (typeof value === 'object' && value !== null) {
     const simpleError: SerializedError = {}
     for (const property of commonProperties) {
@@ -59,7 +59,7 @@ export const miniSerializeError = (value: any): any => {
     return simpleError
   }
 
-  return value
+  return { message: String(value) }
 }
 
 type AsyncThunkConfig = {

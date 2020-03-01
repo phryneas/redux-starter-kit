@@ -126,45 +126,38 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   }
 })()
 
-// bogus testcase for discussion
 {
-  interface Call {
-    qwe: 'asd'
+  interface Item {
+    name: string
   }
-  interface RootState {}
 
-  interface RejectedErrorPayload<T> {
-    data: T
+  interface ErrorFromServer {
     error: string
   }
 
-  interface ValidationErrorsResponse extends CallsResponse {}
-
   interface CallsResponse {
-    data: Call[]
+    data: Item[]
   }
 
   const fetchLiveCallsError = createAsyncThunk<
-    Call[],
+    Item[],
     string,
     {
-      state: RootState
-      rejectValue: RejectedErrorPayload<ValidationErrorsResponse>
+      rejectValue: ErrorFromServer
     }
   >('calls/fetchLiveCalls', async (organizationId, { rejectWithValue }) => {
     try {
-      const {
-        data: { data }
-      } = await apiRequest.get<CallsResponse>(
+      const result = await apiRequest.get<CallsResponse>(
         `organizations/${organizationId}/calls/live/iwill404`
       )
-      return data
+      return result.data.data
     } catch (err) {
-      let error: AxiosError = err // cast for access to AxiosError properties
-      return rejectWithValue({
-        error: 'just a test message',
-        data: error.response?.data
-      })
+      let error: AxiosError<ErrorFromServer> = err // cast for access to AxiosError properties
+      if (!error.response) {
+        // let it be handled as any other unknown error
+        throw err
+      }
+      return rejectWithValue(error.response?.data)
     }
   })
 
@@ -172,18 +165,17 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     if (fetchLiveCallsError.fulfilled.match(result)) {
       //success
       expectType<ReturnType<typeof fetchLiveCallsError['fulfilled']>>(result)
-      expectType<Call[]>(result.payload)
+      expectType<Item[]>(result.payload)
     } else {
       expectType<ReturnType<typeof fetchLiveCallsError['rejected']>>(result)
       if (result.payload) {
         // rejected with value
-        expectType<RejectedErrorPayload<ValidationErrorsResponse>>(
-          result.payload
-        )
+        expectType<ErrorFromServer>(result.payload)
       } else {
         // rejected by throw
         expectType<undefined>(result.payload)
-        // result.error is `any`, because `miniSerializeError` currently returns any (if you pass in a non-object, it returns it and not a SerializedError)
+        expectType<SerializedError>(result.error)
+        // typings:expect-error
         expectType<IsAny<typeof result['error'], true, false>>(true)
       }
     }
