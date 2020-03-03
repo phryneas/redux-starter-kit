@@ -157,7 +157,7 @@ export function createAsyncThunk<
       const aborted = !!error && error.name === 'AbortError'
       return {
         payload,
-        error: payload ? { message: 'Rejected' } : miniSerializeError(error),
+        error: miniSerializeError(error || 'Rejected'),
         meta: {
           arg,
           requestId,
