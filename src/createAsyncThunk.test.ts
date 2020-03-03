@@ -106,105 +106,181 @@ describe('createAsyncThunk', () => {
     expect(errorAction.meta.requestId).toBe(generatedRequestId)
     expect(errorAction.meta.arg).toBe(args)
   })
-})
 
-it('allows a user dispatch a rejected action with a customized payload using rejectWithValue', async () => {
-  const dispatch = jest.fn()
+  it('dispatches an empty error when throwing a random object without serializedError properties', async () => {
+    const dispatch = jest.fn()
 
-  const args = 123
-  let generatedRequestId = ''
+    const args = 123
+    let generatedRequestId = ''
 
-  const errorPayload = {
-    errorMessage:
-      'I am a fake server-provided 400 payload with validation details',
-    errors: [
-      { field_one: 'Must be a string' },
-      { field_two: 'Must be a number' }
-    ]
-  }
+    const errorObject = { wny: 'dothis' }
 
-  const thunkActionCreator = createAsyncThunk(
-    'testType',
-    async (args: number, { requestId, rejectWithValue }) => {
-      generatedRequestId = requestId
+    const thunkActionCreator = createAsyncThunk(
+      'testType',
+      async (args: number, { requestId }) => {
+        generatedRequestId = requestId
+        throw errorObject
+      }
+    )
 
-      return rejectWithValue(errorPayload)
+    const thunkFunction = thunkActionCreator(args)
+
+    try {
+      await thunkFunction(dispatch, () => {}, undefined)
+    } catch (e) {}
+
+    expect(dispatch).toHaveBeenNthCalledWith(
+      1,
+      thunkActionCreator.pending(generatedRequestId, args)
+    )
+
+    expect(dispatch).toHaveBeenCalledTimes(2)
+
+    const errorAction = dispatch.mock.calls[1][0]
+    expect(errorAction.error).toEqual({})
+    expect(errorAction.meta.requestId).toBe(generatedRequestId)
+    expect(errorAction.meta.arg).toBe(args)
+  })
+
+  it('dispatches an action with a formatted error when throwing an object with known error keys', async () => {
+    const dispatch = jest.fn()
+
+    const args = 123
+    let generatedRequestId = ''
+
+    const errorObject = {
+      name: 'Custom thrown error',
+      message: 'This is not necessary',
+      code: '400'
     }
-  )
 
-  const thunkFunction = thunkActionCreator(args)
+    const thunkActionCreator = createAsyncThunk(
+      'testType',
+      async (args: number, { requestId }) => {
+        generatedRequestId = requestId
+        throw errorObject
+      }
+    )
 
-  try {
-    await thunkFunction(dispatch, () => {}, undefined)
-  } catch (e) {}
+    const thunkFunction = thunkActionCreator(args)
 
-  expect(dispatch).toHaveBeenNthCalledWith(
-    1,
-    thunkActionCreator.pending(generatedRequestId, args)
-  )
+    try {
+      await thunkFunction(dispatch, () => {}, undefined)
+    } catch (e) {}
 
-  expect(dispatch).toHaveBeenCalledTimes(2)
+    expect(dispatch).toHaveBeenNthCalledWith(
+      1,
+      thunkActionCreator.pending(generatedRequestId, args)
+    )
 
-  // Have to check the bits of the action separately since the error was processed
-  const errorAction = dispatch.mock.calls[1][0]
+    expect(dispatch).toHaveBeenCalledTimes(2)
 
-  expect(errorAction.error.message).toEqual('Rejected')
-  expect(errorAction.payload).toBe(errorPayload)
-  expect(errorAction.meta.arg).toBe(args)
-})
+    // Have to check the bits of the action separately since the error was processed
+    const errorAction = dispatch.mock.calls[1][0]
+    expect(errorAction.error).toEqual(miniSerializeError(errorObject))
+    expect(Object.keys(errorAction.error)).not.toContain('stack')
+    expect(errorAction.meta.requestId).toBe(generatedRequestId)
+    expect(errorAction.meta.arg).toBe(args)
+  })
 
-it('returns a rejected action with a miniSerializeError when rejectWithValue conditions are not satisfied', async () => {
-  const dispatch = jest.fn()
+  it('dispatches a rejected action with a customized payload when a user returns rejectWithValue()', async () => {
+    const dispatch = jest.fn()
 
-  const args = 123
-  let generatedRequestId = ''
+    const args = 123
+    let generatedRequestId = ''
 
-  const error = new Error('Panic!')
+    const errorPayload = {
+      errorMessage:
+        'I am a fake server-provided 400 payload with validation details',
+      errors: [
+        { field_one: 'Must be a string' },
+        { field_two: 'Must be a number' }
+      ]
+    }
 
-  const errorPayload = {
-    errorMessage:
-      'I am a fake server-provided 400 payload with validation details',
-    errors: [
-      { field_one: 'Must be a string' },
-      { field_two: 'Must be a number' }
-    ]
-  }
+    const thunkActionCreator = createAsyncThunk(
+      'testType',
+      async (args: number, { requestId, rejectWithValue }) => {
+        generatedRequestId = requestId
 
-  const thunkActionCreator = createAsyncThunk(
-    'testType',
-    async (args: number, { requestId, rejectWithValue }) => {
-      generatedRequestId = requestId
-
-      try {
-        throw error
-      } catch (err) {
-        if (!err.response) {
-          throw err
-        }
         return rejectWithValue(errorPayload)
       }
+    )
+
+    const thunkFunction = thunkActionCreator(args)
+
+    try {
+      await thunkFunction(dispatch, () => {}, undefined)
+    } catch (e) {}
+
+    expect(dispatch).toHaveBeenNthCalledWith(
+      1,
+      thunkActionCreator.pending(generatedRequestId, args)
+    )
+
+    expect(dispatch).toHaveBeenCalledTimes(2)
+
+    // Have to check the bits of the action separately since the error was processed
+    const errorAction = dispatch.mock.calls[1][0]
+
+    expect(errorAction.error.message).toEqual('Rejected')
+    expect(errorAction.payload).toBe(errorPayload)
+    expect(errorAction.meta.arg).toBe(args)
+  })
+
+  it('dispatches a rejected action with a miniSerializeError when rejectWithValue conditions are not satisfied', async () => {
+    const dispatch = jest.fn()
+
+    const args = 123
+    let generatedRequestId = ''
+
+    const error = new Error('Panic!')
+
+    const errorPayload = {
+      errorMessage:
+        'I am a fake server-provided 400 payload with validation details',
+      errors: [
+        { field_one: 'Must be a string' },
+        { field_two: 'Must be a number' }
+      ]
     }
-  )
 
-  const thunkFunction = thunkActionCreator(args)
+    const thunkActionCreator = createAsyncThunk(
+      'testType',
+      async (args: number, { requestId, rejectWithValue }) => {
+        generatedRequestId = requestId
 
-  try {
-    await thunkFunction(dispatch, () => {}, undefined)
-  } catch (e) {}
+        try {
+          throw error
+        } catch (err) {
+          if (!err.response) {
+            throw err
+          }
+          return rejectWithValue(errorPayload)
+        }
+      }
+    )
 
-  expect(dispatch).toHaveBeenNthCalledWith(
-    1,
-    thunkActionCreator.pending(generatedRequestId, args)
-  )
+    const thunkFunction = thunkActionCreator(args)
 
-  expect(dispatch).toHaveBeenCalledTimes(2)
+    try {
+      await thunkFunction(dispatch, () => {}, undefined)
+    } catch (e) {}
 
-  // Have to check the bits of the action separately since the error was processed
-  const errorAction = dispatch.mock.calls[1][0]
-  expect(errorAction.error).toEqual(miniSerializeError(error))
-  expect(errorAction.payload).toEqual(undefined)
-  expect(errorAction.meta.requestId).toBe(generatedRequestId)
-  expect(errorAction.meta.arg).toBe(args)
+    expect(dispatch).toHaveBeenNthCalledWith(
+      1,
+      thunkActionCreator.pending(generatedRequestId, args)
+    )
+
+    expect(dispatch).toHaveBeenCalledTimes(2)
+
+    // Have to check the bits of the action separately since the error was processed
+    const errorAction = dispatch.mock.calls[1][0]
+    expect(errorAction.error).toEqual(miniSerializeError(error))
+    expect(errorAction.payload).toEqual(undefined)
+    expect(errorAction.meta.requestId).toBe(generatedRequestId)
+    expect(errorAction.meta.arg).toBe(args)
+  })
 })
 
 describe('createAsyncThunk with abortController', () => {
