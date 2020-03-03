@@ -317,7 +317,7 @@ const fetchUserById = createAsyncThunk(
 
 ## Examples
 
-#### Requesting a user by ID, with loading state, and only one request at a time:
+- Requesting a user by ID, with loading state, and only one request at a time:
 
 ```js
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
@@ -382,7 +382,8 @@ const UsersComponent = () => {
 }
 ```
 
-#### Using rejectWithValue to access a custom rejected payload in a component
+- Using rejectWithValue to access a custom rejected payload in a component
+
 ```js
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
 import { userAPI } from './userAPI'
@@ -440,7 +441,7 @@ const UsersComponent = () => {
       } else {
         if (resultAction.payload) {
           // This is assuming the api returned a 400 error with a body of { errorMessage: 'Validation errors', field_errors: [{ field_name: 'Should be a string' }]}
-          setErrors(resultAction.payload.field_errors) 
+          setErrors(resultAction.payload.field_errors)
         } else {
           showToast('error', `Update failed: ${resultAction.error}`)
         }
@@ -451,9 +452,9 @@ const UsersComponent = () => {
 }
 ```
 
-
-#### TypeScript: Using rejectWithValue to access a custom rejected payload in a component
+- TypeScript: Using rejectWithValue to access a custom rejected payload in a component
 _Note: this is a contrived example assuming our userAPI only ever throws a validation-specific errors_
+
 ```typescript
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
 import { userAPI } from './userAPI'
@@ -541,7 +542,7 @@ const UsersComponent = () => {
       } else {
         if (resultAction.payload) {
           // Being that we passed in ValidationErrors to rejectType in `createAsyncThunk`, those types will be available here.
-          setErrors(resultAction.payload.field_errors) 
+          setErrors(resultAction.payload.field_errors)
         } else {
           showToast('error', `Update failed: ${resultAction.error}`)
         }
