@@ -91,7 +91,7 @@ When dispatched, the thunk will:
 - call the `payloadCreator` callback and wait for the returned promise to settle
 - when the promise settles:
   - if the promise resolved successfully, dispatch the `fulfilled` action with the promise value as `action.payload`
-  - if the promise resolved successfully or failed, but was returned with `rejectWithValue(value)`, dispatch the `rejected` action with the value passed into `action.payload`  and 'Rejected' as `action.error.message`
+  - if the promise resolved successfully or failed, but was returned with `rejectWithValue(value)`, dispatch the `rejected` action with the value passed into `action.payload` and 'Rejected' as `action.error.message`
   - if the promise failed and was not handled with `rejectWithValue`, dispatch the `rejected` action with a serialized version of the error value as `action.error`
 - Return a fulfilled promise containing the final dispatched action (either the `fulfilled` or `rejected` action object)
 
@@ -397,7 +397,7 @@ const updateUser = createAsyncThunk(
     } catch (err) {
       // Note: this is an example assuming the usage of axios. Other fetching libraries would likely have different implementations
       if (!err.response) {
-        throw err;
+        throw err
       }
 
       return rejectWithValue(err.response.data)
@@ -410,20 +410,20 @@ const usersSlice = createSlice({
   initialState: {
     entities: {},
     loading: 'idle',
-    error: null,
+    error: null
   },
   reducers: {},
   extraReducers: {
     [updateUser.fullfilled]: (state, action) => {
-      const user = action.payload;
-      state.entities[user.id] = user;
+      const user = action.payload
+      state.entities[user.id] = user
     },
     [updateUser.rejected]: (state, action) => {
       if (action.payload) {
         // if a rejected action has a payload, it means that it was returned with rejectWithValue
         state.error = action.payload.errorMessage
       } else {
-        state.error = action.error;
+        state.error = action.error
       }
     }
   }
@@ -434,18 +434,18 @@ const UsersComponent = () => {
   const dispatch = useDispatch()
 
   const updateUser = async userData => {
-      const resultAction = await dispatch(updateUser(userData))
-      if (updateUser.fulfilled.match(resultAction)) {
-        const user = unwrapResult(resultAction)
-        showToast('success', `Updated ${user.name}`)
+    const resultAction = await dispatch(updateUser(userData))
+    if (updateUser.fulfilled.match(resultAction)) {
+      const user = unwrapResult(resultAction)
+      showToast('success', `Updated ${user.name}`)
+    } else {
+      if (resultAction.payload) {
+        // This is assuming the api returned a 400 error with a body of { errorMessage: 'Validation errors', field_errors: [{ field_name: 'Should be a string' }]}
+        setErrors(resultAction.payload.field_errors)
       } else {
-        if (resultAction.payload) {
-          // This is assuming the api returned a 400 error with a body of { errorMessage: 'Validation errors', field_errors: [{ field_name: 'Should be a string' }]}
-          setErrors(resultAction.payload.field_errors)
-        } else {
-          showToast('error', `Update failed: ${resultAction.error}`)
-        }
+        showToast('error', `Update failed: ${resultAction.error}`)
       }
+    }
   }
 
   // render UI here
@@ -453,7 +453,7 @@ const UsersComponent = () => {
 ```
 
 - TypeScript: Using rejectWithValue to access a custom rejected payload in a component
-_Note: this is a contrived example assuming our userAPI only ever throws a validation-specific errors_
+  _Note: this is a contrived example assuming our userAPI only ever throws a validation-specific errors_
 
 ```typescript
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
@@ -477,28 +477,25 @@ interface UpdateUserResponse {
 }
 
 const updateUser = createAsyncThunk<
-    User,
-    Partial<User>,
-    {
-      rejectValue: ValidationErrors
-    }
-  >(
-  'users/update',
-  async (userData, { rejectWithValue }) => {
-    try {
-      const { id, ...data } = userData;
-      const response = await userAPI.updateById<UpdateUserResponse>(id, data)
-      return response.data.user
-    } catch (err) {
-      let error: AxiosError<ValidationErrors> = err; // cast the error for access
-      if (!error.response) {
-        throw err;
-      }
-      // We got validation errors, let's return those so we can reference in our component and set form errors
-      return rejectWithValue(error.response.data)
-    }
+  User,
+  Partial<User>,
+  {
+    rejectValue: ValidationErrors
   }
-)
+>('users/update', async (userData, { rejectWithValue }) => {
+  try {
+    const { id, ...data } = userData
+    const response = await userAPI.updateById<UpdateUserResponse>(id, data)
+    return response.data.user
+  } catch (err) {
+    let error: AxiosError<ValidationErrors> = err // cast the error for access
+    if (!error.response) {
+      throw err
+    }
+    // We got validation errors, let's return those so we can reference in our component and set form errors
+    return rejectWithValue(error.response.data)
+  }
+})
 
 interface UsersState {
   error: string | null
@@ -507,7 +504,7 @@ interface UsersState {
 
 const initialState: UsersState = {
   entities: {},
-  error: null,
+  error: null
 }
 
 const usersSlice = createSlice({
@@ -516,14 +513,14 @@ const usersSlice = createSlice({
   reducers: {},
   extraReducers: builder => {
     builder.addCase(updateUser.fulfilled, (state, { payload }) => {
-      state.entities[payload.id] = payload;
+      state.entities[payload.id] = payload
     })
     builder.addCase(updateUser.rejected, (state, action) => {
       if (action.payload) {
         // Being that we passed in ValidationErrors to rejectType in `createAsyncThunk`, the payload will be available here.
         state.error = action.payload.errorMessage
       } else {
-        state.error = action.error;
+        state.error = action.error
       }
     })
   }
@@ -534,19 +531,19 @@ const UsersComponent = () => {
   const dispatch = useDispatch()
 
   const updateUser = async userData => {
-      const resultAction = await dispatch(updateUser(userData))
-      if (updateUser.fulfilled.match(resultAction)) {
-        // user will have a type signature of User as we passed that as the Returned parameter in createAsyncThunk
-        const user = unwrapResult(resultAction)
-        showToast('success', `Updated ${user.name}`)
+    const resultAction = await dispatch(updateUser(userData))
+    if (updateUser.fulfilled.match(resultAction)) {
+      // user will have a type signature of User as we passed that as the Returned parameter in createAsyncThunk
+      const user = unwrapResult(resultAction)
+      showToast('success', `Updated ${user.name}`)
+    } else {
+      if (resultAction.payload) {
+        // Being that we passed in ValidationErrors to rejectType in `createAsyncThunk`, those types will be available here.
+        setErrors(resultAction.payload.field_errors)
       } else {
-        if (resultAction.payload) {
-          // Being that we passed in ValidationErrors to rejectType in `createAsyncThunk`, those types will be available here.
-          setErrors(resultAction.payload.field_errors)
-        } else {
-          showToast('error', `Update failed: ${resultAction.error}`)
-        }
+        showToast('error', `Update failed: ${resultAction.error}`)
       }
+    }
   }
 
   // render UI here

@@ -447,7 +447,7 @@ const fetchUserById = createAsyncThunk<
 })
 ```
 
-If you are performing a request that you know will typically either be a success or have an expected error format, you can pass in a type to `rejectValue` and  `return rejectWithValue(knownPayload)`. This allows you to reference the error payload in the reducer as well as in a component
+If you are performing a request that you know will typically either be a success or have an expected error format, you can pass in a type to `rejectValue` and `return rejectWithValue(knownPayload)`. This allows you to reference the error payload in the reducer as well as in a component
 
 ```ts
 interface MyKnownError {
@@ -468,7 +468,7 @@ const updateUserById = createAsyncThunk<
     rejectValue: MyKnownError
   }
 >('users/updateById', async (user, thunkApi) => {
-  const { id, ...userData } = user;
+  const { id, ...userData } = user
   const response = await fetch(`https://reqres.in/api/users/${id}`, {
     method: 'PUT',
     headers: {
@@ -478,7 +478,7 @@ const updateUserById = createAsyncThunk<
   })
   if (response.status === 400) {
     // Return any known error for future handling
-    return thunkApi.rejectWithValue(await response.json() as MyKnownError);
+    return thunkApi.rejectWithValue((await response.json()) as MyKnownError)
   }
   return (await response.json()) as MyData
 })
