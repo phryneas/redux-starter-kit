@@ -451,6 +451,7 @@ If you are performing a request that you know will typically either be a success
 
 ```ts
 interface MyKnownError {
+  errorMessage: string
   // ...
 }
 
@@ -458,7 +459,7 @@ const updateUserById = createAsyncThunk<
   // Return type of the payload creator
   MyData,
   // First argument to the payload creator
-  number,
+  { id: string; first_name: string; last_name: string; email: string },
   // Types for ThunkAPI
   {
     extra: {
@@ -476,7 +477,7 @@ const updateUserById = createAsyncThunk<
     body: JSON.stringify(userData)
   })
   if (response.status === 400) {
-    // Return any known error for future handling
+    // Return the known error for future handling
     return thunkApi.rejectWithValue((await response.json()) as MyKnownError)
   }
   return (await response.json()) as MyData
@@ -484,6 +485,54 @@ const updateUserById = createAsyncThunk<
 ```
 
 While this notation for `state`, `dispatch`, `extra` and `rejectValue` might seem uncommon at first, it allows you to provide only the types for these you actually need - so for example, if you are not accessing `getState` within your `payloadCreator`, there is no need to provide a type for `state`. The same can be said about `rejectValue` - if you don't need to access any potential error payload, you can ignore it.
+
+In addition, you can leverage checks against `action.payload` and `match` as provided by `createAction` as a type-guard for when you want to access known properties on defined types. Example:
+
+- In a reducer
+
+```ts
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: {
+    entities: {},
+    error: null
+  },
+  reducers: {},
+  extraReducers: builder => {
+    builder.addCase(updateUserById.fulfilled, (state, { payload }) => {
+      state.entities[payload.id] = payload
+    })
+    builder.addCase(updateUserById.rejected, (state, action) => {
+      if (action.payload) {
+        // Being that we passed in MyKnownError to rejectType in `updateUserById`, the type information will be available here.
+        state.error = action.payload.errorMessage
+      } else {
+        state.error = action.error
+      }
+    })
+  }
+})
+```
+
+- In a component
+
+```ts
+const updateUser = async userData => {
+  const { id, ...userFields } = userData
+  const resultAction = await dispatch(updateUserById(userFields))
+  if (updateUser.fulfilled.match(resultAction)) {
+    const user = unwrapResult(resultAction)
+    showToast('success', `Updated ${user.name}`)
+  } else {
+    if (resultAction.payload) {
+      // Being that we passed in MyKnownError to rejectType in `updateUserById`, the type information will be available here.
+      showToast('error', `Update failed: ${rersultAction.payload.errorMessage}`)
+    } else {
+      showToast('error', `Update failed: ${resultAction.error.message}`)
+    }
+  }
+}
+```
 
 ## `createEntityAdapter`
 
