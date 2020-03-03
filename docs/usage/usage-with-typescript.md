@@ -447,7 +447,7 @@ const fetchUserById = createAsyncThunk<
 })
 ```
 
-If you are performing a request that you know will typically either be a success or have an expected error format, you can pass in a type to `rejectValue` and `return rejectWithValue(knownPayload)`. This allows you to reference the error payload in the reducer as well as in a component
+If you are performing a request that you know will typically either be a success or have an expected error format, you can pass in a type to `rejectValue` and `return rejectWithValue(knownPayload)` in the action creator. This allows you to reference the error payload in the reducer as well as in a component after dispatching the `createAsyncThunk` action.
 
 ```ts
 interface MyKnownError {
@@ -456,12 +456,11 @@ interface MyKnownError {
 
 const updateUserById = createAsyncThunk<
   // Return type of the payload creator
-  Promise<MyData>,
+  MyData,
   // First argument to the payload creator
   number,
+  // Types for ThunkAPI
   {
-    dispatch: AppDispatch
-    state: State
     extra: {
       jwt: string
     }
