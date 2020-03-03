@@ -64,7 +64,7 @@ For example, a `type` argument of `'users/requestStatus'` will generate these ac
 
 ### `payloadCreator`
 
-A callback function that should return a promise containing the result of some asynchronous logic. It may also return a value synchronously. If there is an error, it should return a rejected promise containing one of the following: an `Error` instance, a plain value such as a descriptive error message, or a manually rejected error with a defined payload.
+A callback function that should return a promise containing the result of some asynchronous logic. It may also return a value synchronously. If there is an error, it should either return a rejected promise containing an `Error` instance or a plain value such as a descriptive error message or otherwise a resolved promise with a `RejectWithValue` argument as returned by the `thunkApi.rejectWithValue` function.
 
 The `payloadCreator` function can contain whatever logic you need to calculate an appropriate result. This could include a standard AJAX data fetch request, multiple AJAX calls with the results combined into a final value, interactions with React Native `AsyncStorage`, and so on.
 
@@ -91,7 +91,7 @@ When dispatched, the thunk will:
 - call the `payloadCreator` callback and wait for the returned promise to settle
 - when the promise settles:
   - if the promise resolved successfully, dispatch the `fulfilled` action with the promise value as `action.payload`
-  - if the promise resolved successfully or failed, but was returned with `rejectWithValue(value)`, dispatch the `rejected` action with the value passed into `action.payload` and 'Rejected' as `action.error.message`
+  - if the promise resolved with a `rejectWithValue(value)` return value, dispatch the `rejected` action with the value passed into `action.payload` and 'Rejected' as `action.error.message`
   - if the promise failed and was not handled with `rejectWithValue`, dispatch the `rejected` action with a serialized version of the error value as `action.error`
 - Return a fulfilled promise containing the final dispatched action (either the `fulfilled` or `rejected` action object)
 
@@ -391,8 +391,9 @@ import { userAPI } from './userAPI'
 const updateUser = createAsyncThunk(
   'users/update',
   async (userData, { rejectWithValue }) => {
+    const { id, ...fields } = userData;
     try {
-      const response = await userAPI.updateById(userData)
+      const response = await userAPI.updateById(id, fields)
       return response.data.user
     } catch (err) {
       // Note: this is an example assuming the usage of axios. Other fetching libraries would likely have different implementations
@@ -409,7 +410,6 @@ const usersSlice = createSlice({
   name: 'users',
   initialState: {
     entities: {},
-    loading: 'idle',
     error: null
   },
   reducers: {},
@@ -420,7 +420,7 @@ const usersSlice = createSlice({
     },
     [updateUser.rejected]: (state, action) => {
       if (action.payload) {
-        // if a rejected action has a payload, it means that it was returned with rejectWithValue
+        // If a rejected action has a payload, it means that it was returned with rejectWithValue
         state.error = action.payload.errorMessage
       } else {
         state.error = action.error
@@ -433,15 +433,16 @@ const UsersComponent = () => {
   const { users, loading, error } = useSelector(state => state.users)
   const dispatch = useDispatch()
 
-  const updateUser = async userData => {
-    const resultAction = await dispatch(updateUser(userData))
+  // This is an example of an onSubmit handler using Formik meant to demonstrate accessing the payload of the rejected action
+  const handleUpdateUser = async (values, formikHelpers) => {
+    const resultAction = await dispatch(updateUser(values))
     if (updateUser.fulfilled.match(resultAction)) {
       const user = unwrapResult(resultAction)
       showToast('success', `Updated ${user.name}`)
     } else {
       if (resultAction.payload) {
-        // This is assuming the api returned a 400 error with a body of { errorMessage: 'Validation errors', field_errors: [{ field_name: 'Should be a string' }]}
-        setErrors(resultAction.payload.field_errors)
+        // This is assuming the api returned a 400 error with a body of { errorMessage: 'Validation errors', field_errors: { field_name: 'Should be a string' } }
+        formikHelpers.setErrors(resultAction.payload.field_errors)
       } else {
         showToast('error', `Update failed: ${resultAction.error}`)
       }
@@ -458,6 +459,8 @@ const UsersComponent = () => {
 ```typescript
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
 import { userAPI } from './userAPI'
+import { AppDispatch, RootState } from '../store'
+import { FormikHelpers } from 'formik'
 
 // Sample types that will be used
 interface User {
@@ -484,8 +487,8 @@ const updateUser = createAsyncThunk<
   }
 >('users/update', async (userData, { rejectWithValue }) => {
   try {
-    const { id, ...data } = userData
-    const response = await userAPI.updateById<UpdateUserResponse>(id, data)
+    const { id, ...fields } = userData
+    const response = await userAPI.updateById<UpdateUserResponse>(id, fields)
     return response.data.user
   } catch (err) {
     let error: AxiosError<ValidationErrors> = err // cast the error for access
@@ -512,6 +515,7 @@ const usersSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: builder => {
+    // The `builder` callback form is used here because it provides correctly typed reducers from the action creators
     builder.addCase(updateUser.fulfilled, (state, { payload }) => {
       state.entities[payload.id] = payload
     })
@@ -527,11 +531,12 @@ const usersSlice = createSlice({
 })
 
 const UsersComponent = () => {
-  const { users, loading, error } = useSelector( (state: RootState) => state.users)
-  const dispatch = useDispatch()
+  const { users, loading, error } = useSelector((state: RootState) => state.users)
+  const dispatch: AppDispatch = useDispatch()
 
-  const updateUser = async userData => {
-    const resultAction = await dispatch(updateUser(userData))
+  // This is an example of an onSubmit handler using Formik meant to demonstrate accessing the payload of the rejected action
+  const handleUpdateUser = async (values: FormValues, formikHelpers: FormikHelpers<FormValues>) => {
+    const resultAction = await dispatch(updateUser(values))
     if (updateUser.fulfilled.match(resultAction)) {
       // user will have a type signature of User as we passed that as the Returned parameter in createAsyncThunk
       const user = unwrapResult(resultAction)
@@ -539,7 +544,7 @@ const UsersComponent = () => {
     } else {
       if (resultAction.payload) {
         // Being that we passed in ValidationErrors to rejectType in `createAsyncThunk`, those types will be available here.
-        setErrors(resultAction.payload.field_errors)
+        formikHelpers.setErrors(resultAction.payload.field_errors)
       } else {
         showToast('error', `Update failed: ${resultAction.error}`)
       }

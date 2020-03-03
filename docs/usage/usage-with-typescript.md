@@ -427,7 +427,7 @@ To define the types for these arguments, pass an object as the third generic arg
 ```ts
 const fetchUserById = createAsyncThunk<
   // Return type of the payload creator
-  Promise<MyData>,
+  MyData,
   // First argument to the payload creator
   number,
   {
