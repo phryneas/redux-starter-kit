@@ -454,12 +454,18 @@ interface MyKnownError {
   errorMessage: string
   // ...
 }
+interface UserAttributes {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+}
 
-const updateUserById = createAsyncThunk<
+const updateUser = createAsyncThunk<
   // Return type of the payload creator
   MyData,
   // First argument to the payload creator
-  { id: string; first_name: string; last_name: string; email: string },
+  UserAttributes,
   // Types for ThunkAPI
   {
     extra: {
@@ -467,7 +473,7 @@ const updateUserById = createAsyncThunk<
     }
     rejectValue: MyKnownError
   }
->('users/updateById', async (user, thunkApi) => {
+>('users/update', async (user, thunkApi) => {
   const { id, ...userData } = user
   const response = await fetch(`https://reqres.in/api/users/${id}`, {
     method: 'PUT',
@@ -499,12 +505,12 @@ const usersSlice = createSlice({
   },
   reducers: {},
   extraReducers: builder => {
-    builder.addCase(updateUserById.fulfilled, (state, { payload }) => {
+    builder.addCase(updateUser.fulfilled, (state, { payload }) => {
       state.entities[payload.id] = payload
     })
-    builder.addCase(updateUserById.rejected, (state, action) => {
+    builder.addCase(updateUser.rejected, (state, action) => {
       if (action.payload) {
-        // Since we passed in `MyKnownError` to `rejectType` in `updateUserById`, the type information will be available here.
+        // Since we passed in `MyKnownError` to `rejectType` in `updateUser`, the type information will be available here.
         state.error = action.payload.errorMessage
       } else {
         state.error = action.error
@@ -517,16 +523,16 @@ const usersSlice = createSlice({
 - In a component
 
 ```ts
-const updateUser = async userData => {
-  const { id, ...userFields } = userData
-  const resultAction = await dispatch(updateUserById(userFields))
+const handleUpdateUser = async userData => {
+  const resultAction = await dispatch(updateUser(userData))
   if (updateUser.fulfilled.match(resultAction)) {
     const user = unwrapResult(resultAction)
     showToast('success', `Updated ${user.name}`)
   } else {
     if (resultAction.payload) {
-      // Since we passed in `MyKnownError` to `rejectType` in `updateUserById`, the type information will be available here.
-      showToast('error', `Update failed: ${rersultAction.payload.errorMessage}`)
+      // Since we passed in `MyKnownError` to `rejectType` in `updateUser`, the type information will be available here.
+      // Note: this would also be a good place to do any handling that relies on the `rejectedWithValue` payload, such as setting field errors
+      showToast('error', `Update failed: ${resultAction.payload.errorMessage}`)
     } else {
       showToast('error', `Update failed: ${resultAction.error.message}`)
     }
