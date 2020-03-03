@@ -453,7 +453,7 @@ const UsersComponent = () => {
 ```
 
 - TypeScript: Using rejectWithValue to access a custom rejected payload in a component
-  _Note: this is a contrived example assuming our userAPI only ever throws a validation-specific errors_
+  _Note: this is a contrived example assuming our userAPI only ever throws validation-specific errors_
 
 ```typescript
 import { createAsyncThunk, createSlice, unwrapResult } from '@reduxjs/toolkit'
@@ -527,7 +527,7 @@ const usersSlice = createSlice({
 })
 
 const UsersComponent = () => {
-  const { users, loading, error } = useSelector(state => state.users)
+  const { users, loading, error } = useSelector( (state: RootState) => state.users)
   const dispatch = useDispatch()
 
   const updateUser = async userData => {
