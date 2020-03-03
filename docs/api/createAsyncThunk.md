@@ -391,7 +391,7 @@ import { userAPI } from './userAPI'
 const updateUser = createAsyncThunk(
   'users/update',
   async (userData, { rejectWithValue }) => {
-    const { id, ...fields } = userData;
+    const { id, ...fields } = userData
     try {
       const response = await userAPI.updateById(id, fields)
       return response.data.user
@@ -531,11 +531,16 @@ const usersSlice = createSlice({
 })
 
 const UsersComponent = () => {
-  const { users, loading, error } = useSelector((state: RootState) => state.users)
+  const { users, loading, error } = useSelector(
+    (state: RootState) => state.users
+  )
   const dispatch: AppDispatch = useDispatch()
 
   // This is an example of an onSubmit handler using Formik meant to demonstrate accessing the payload of the rejected action
-  const handleUpdateUser = async (values: FormValues, formikHelpers: FormikHelpers<FormValues>) => {
+  const handleUpdateUser = async (
+    values: FormValues,
+    formikHelpers: FormikHelpers<FormValues>
+  ) => {
     const resultAction = await dispatch(updateUser(values))
     if (updateUser.fulfilled.match(resultAction)) {
       // user will have a type signature of User as we passed that as the Returned parameter in createAsyncThunk
