@@ -1,0 +1,17 @@
+{
+  "mode": "file",
+  "out": "docs/typegen",
+  "exclude": ["**/*+(test|.spec).ts", "**/fixtures/**"],
+  "excludeExternals": true,
+  "excludeNotExported": true,
+  "toc": [
+    "configureStore",
+    "getDefaultMiddleware",
+    "createReducer",
+    "createAction",
+    "createSlice",
+    "createSelector",
+    "createAsyncThunk",
+    "createEntityAdapter"
+  ]
+}
