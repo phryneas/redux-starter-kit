@@ -115,5 +115,6 @@ module.exports = {
     googleAnalytics: {
       trackingID: 'UA-130598673-3'
     }
-  }
+  },
+  plugins: [__dirname + '/apiDoc-plugin']
 }

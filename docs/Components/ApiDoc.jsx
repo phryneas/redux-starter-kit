@@ -1,5 +1,11 @@
 import React from 'react'
-import json from '../../temp/toolkit.api.json'
+import jsonObject from '../../temp/toolkit.api.json'
+// import { ApiModel } from './ApiModel'
+import { Deserializer, ApiItem } from '@microsoft/api-extractor-model'
+import {
+  DeserializerContext,
+  ApiJsonSchemaVersion
+} from '@microsoft/api-extractor-model/lib/model/DeserializerContext'
 
 /**
  * @typedef {{
@@ -15,7 +21,7 @@ import json from '../../temp/toolkit.api.json'
  * @param {Map<string, Node>} canonicalReferences
  */
 function collectCanonicalReferences(
-  data = json,
+  data = jsonObject,
   canonicalReferences = new Map()
 ) {
   canonicalReferences.set(data.canonicalReference, data)
@@ -26,6 +32,21 @@ function collectCanonicalReferences(
 }
 
 const canonicalReferences = collectCanonicalReferences()
+
+const context = new DeserializerContext({
+  apiJsonFilename: '',
+  toolPackage: jsonObject.metadata.toolPackage,
+  toolVersion: jsonObject.metadata.toolVersion,
+  versionToDeserialize: ApiJsonSchemaVersion.LATEST
+})
+
+const item = ApiItem.deserialize(jsonObject, context)
+
+/*
+const apiModel = new ApiModel()
+apiModel.addMember()
+console.log(apiModel)
+*/
 
 /**
  *
