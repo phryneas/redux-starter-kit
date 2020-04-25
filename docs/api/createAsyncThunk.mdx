@@ -5,7 +5,8 @@ sidebar_label: createAsyncThunk
 hide_title: true
 ---
 
-import { ApiDoc } from '../Components/ApiDoc.jsx'
+import { ApiDoc } from '../Components/ApiDoc'
+import { Markdown } from '../Components/Markdown';
 
 # `createAsyncThunk`
 
@@ -17,7 +18,11 @@ This abstracts the standard recommended approach for handling async request life
 
 It does not generate any reducer functions, since it does not know what data you're fetching, how you want to track loading state, or how the data you return needs to be processed. You should write your own reducer logic that handles these actions, with whatever loading state and processing logic is appropriate for your own app.
 
-<ApiDoc reference="@reduxjs/toolkit!createAsyncThunk:function(1)" />
+<ApiDoc reference="@reduxjs/toolkit!createAsyncThunk:function(1)" render={({ paramsTable }) => (
+    <Markdown>
+    { paramsTable }
+    </Markdown>
+  )} />
 
 Sample usage:
 
