@@ -42,10 +42,12 @@ const buildMarkdownTable = ({ columns = [], data = [] }) => {
     `|${headers.map((h, i) => fill(h, columnWidths[i])).join('|')}|`
   )
 
+  console.log(`|${headers.map((h, i) => fill(h, columnWidths[i])).join('|')}|`)
   // Insert headers divider row
   tableResult.push(
     `|${columnWidths.map(width => '-'.repeat(width)).join('|')}|`
   )
+  console.log(`|${columnWidths.map(width => '-'.repeat(width)).join('|')}|`)
 
   for (const entry of data) {
     // Fill the value with X required padding to maintain desired output
@@ -53,6 +55,7 @@ const buildMarkdownTable = ({ columns = [], data = [] }) => {
       fill(key, columnWidths[i])
     )
     tableResult.push(`|${filled.join('|')}|`)
+    console.log(`|${filled.join('|')}|`)
   }
 
   return tableResult.join('\n')
