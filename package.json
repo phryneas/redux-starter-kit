@@ -43,6 +43,14 @@
     "typescript": "^3.8.2",
     "typings-tester": "^0.3.2"
   },
+  "peerDependencies": {
+    "immutable": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "immutable": {
+      "optional": true
+    }
+  },
   "scripts": {
     "build-ci": "tsdx build --format cjs,esm,umd --name redux-toolkit && api-extractor run",
     "build": "tsdx build --format cjs,esm,umd --name redux-toolkit && api-extractor run --local",
