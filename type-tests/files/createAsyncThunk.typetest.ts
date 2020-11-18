@@ -6,6 +6,7 @@ import { unwrapResult, SerializedError } from 'src/createAsyncThunk'
 import apiRequest, { AxiosError } from 'axios'
 import { IsAny, IsUnknown } from 'src/tsHelpers'
 
+const anyAction = {} as AnyAction
 function expectType<T>(t: T) {
   return t
 }
@@ -363,5 +364,29 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     asyncThunk(5)
     // typings:expect-error
     asyncThunk()
+  }
+}
+
+{
+  type Funky = { somethingElse: 'Funky!' }
+  function funkySerializeError(err: any): Funky {
+    return { somethingElse: 'Funky!' }
+  }
+
+  const shouldFail = createAsyncThunk('without generics', () => {}, {
+    // typings:expect-error
+    serializeError: funkySerializeError
+  })
+
+  const shouldWork = createAsyncThunk<
+    any,
+    void,
+    { serializedErrorType: Funky }
+  >('with generics', () => {}, {
+    serializeError: funkySerializeError
+  })
+
+  if (shouldWork.rejected.match(anyAction)) {
+    expectType<Funky>(anyAction.error)
   }
 }
