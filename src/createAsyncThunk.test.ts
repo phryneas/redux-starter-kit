@@ -667,3 +667,49 @@ describe('unwrapResult', () => {
     await expect(unwrapPromise).rejects.toBe('rejectWithValue!')
   })
 })
+
+describe('`unwrap` option behaviour', () => {
+  const getState = jest.fn(() => ({}))
+  const dispatch = jest.fn((x: any) => x)
+  const extra = {}
+  test('fulfilled case', async () => {
+    const asyncThunk = createAsyncThunk('test', () => {
+      return 'fulfilled!'
+    })
+
+    const promise = asyncThunk(undefined, { unwrap: true })(
+      dispatch,
+      getState,
+      extra
+    )
+
+    await expect(promise).resolves.toBe('fulfilled!')
+  })
+  test('error case', async () => {
+    const error = new Error('Panic!')
+    const asyncThunk = createAsyncThunk('test', () => {
+      throw error
+    })
+
+    const promise = asyncThunk(undefined, { unwrap: true })(
+      dispatch,
+      getState,
+      extra
+    )
+
+    await expect(promise).rejects.toEqual(miniSerializeError(error))
+  })
+  test('rejectWithValue case', async () => {
+    const asyncThunk = createAsyncThunk('test', (_, { rejectWithValue }) => {
+      return rejectWithValue('rejectWithValue!')
+    })
+
+    const promise = asyncThunk(undefined, { unwrap: true })(
+      dispatch,
+      getState,
+      extra
+    )
+
+    await expect(promise).rejects.toBe('rejectWithValue!')
+  })
+})

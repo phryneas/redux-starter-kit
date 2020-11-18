@@ -166,6 +166,16 @@ export type AsyncThunkAction<
   arg: ThunkArg
 }
 
+type AsyncThunkUnwrappedAction<Returned, ThunkArg, ThunkApiConfig> = (
+  dispatch: GetDispatch<ThunkApiConfig>,
+  getState: () => GetState<ThunkApiConfig>,
+  extra: GetExtra<ThunkApiConfig>
+) => Promise<Returned> & {
+  abort(reason?: string): void
+  requestId: string
+  arg: ThunkArg
+}
+
 type AsyncThunkActionCreator<
   Returned,
   ThunkArg,
@@ -173,24 +183,69 @@ type AsyncThunkActionCreator<
 > = IsAny<
   ThunkArg,
   // any handling
-  (arg: ThunkArg) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>,
+  {
+    (arg: ThunkArg, opts: { unwrap: true }): AsyncThunkUnwrappedAction<
+      Returned,
+      ThunkArg,
+      ThunkApiConfig
+    >
+    (arg: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+  },
   // unknown handling
   unknown extends ThunkArg
-    ? (arg: ThunkArg) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig> // argument not specified or specified as void or undefined
+    ? {
+        (arg: ThunkArg, opts: { unwrap: true }): AsyncThunkUnwrappedAction<
+          Returned,
+          ThunkArg,
+          ThunkApiConfig
+        >
+        (arg: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+      } // argument not specified or specified as void or undefined
     : [ThunkArg] extends [void] | [undefined]
-    ? () => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig> // argument contains void
+    ? {
+        (arg: ThunkArg, opts: { unwrap: true }): AsyncThunkUnwrappedAction<
+          Returned,
+          ThunkArg,
+          ThunkApiConfig
+        >
+        (): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+      } // argument contains void
     : [void] extends [ThunkArg] // make optional
-    ? (arg?: ThunkArg) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig> // argument contains undefined
+    ? {
+        (
+          arg: ThunkArg | undefined,
+          opts: { unwrap: true }
+        ): AsyncThunkUnwrappedAction<Returned, ThunkArg, ThunkApiConfig>
+        (arg?: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+      } // argument contains undefined
     : [undefined] extends [ThunkArg]
     ? WithStrictNullChecks<
         // with strict nullChecks: make optional
-        (
-          arg?: ThunkArg
-        ) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>,
+        {
+          (
+            arg: ThunkArg | undefined,
+            opts: { unwrap: true }
+          ): AsyncThunkUnwrappedAction<Returned, ThunkArg, ThunkApiConfig>
+          (arg?: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+        },
         // without strict null checks this will match everything, so don't make it optional
-        (arg: ThunkArg) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+        {
+          (arg: ThunkArg, opts: { unwrap: true }): AsyncThunkUnwrappedAction<
+            Returned,
+            ThunkArg,
+            ThunkApiConfig
+          >
+          (arg: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+        }
       > // default case: normal argument
-    : (arg: ThunkArg) => AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+    : {
+        (arg: ThunkArg, opts: { unwrap: true }): AsyncThunkUnwrappedAction<
+          Returned,
+          ThunkArg,
+          ThunkApiConfig
+        >
+        (arg: ThunkArg): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+      }
 >
 
 interface AsyncThunkOptions<
@@ -328,7 +383,7 @@ export function createAsyncThunk<
 
       return {
         payload: error instanceof RejectWithValue ? error.payload : undefined,
-        error: (options?.serializeError || miniSerializeError)(
+        error: ((options && options.serializeError) || miniSerializeError)(
           error || 'Rejected'
         ) as GetSerializedErrorType<ThunkApiConfig>,
         meta: {
@@ -371,8 +426,11 @@ If you want to use the AbortController to react to \`abort\` events, please cons
         }
 
   function actionCreator(
-    arg: ThunkArg
-  ): AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig> {
+    arg: ThunkArg,
+    opts?: { unwrap: true }
+  ):
+    | AsyncThunkAction<Returned, ThunkArg, ThunkApiConfig>
+    | AsyncThunkUnwrappedAction<Returned, ThunkArg, ThunkApiConfig> {
     return (dispatch, getState, extra) => {
       const requestId = nanoid()
 
@@ -446,6 +504,17 @@ If you want to use the AbortController to react to \`abort\` events, please cons
         if (!skipDispatch) {
           dispatch(finalAction)
         }
+
+        if (opts && opts.unwrap) {
+          if (rejected.match(finalAction)) {
+            if (finalAction.meta.rejectedWithValue) {
+              throw finalAction.payload
+            }
+            throw (finalAction as any).error
+          }
+          return finalAction.payload as any
+        }
+
         return finalAction
       })()
       return Object.assign(promise, { abort, requestId, arg })

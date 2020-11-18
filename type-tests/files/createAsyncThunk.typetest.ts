@@ -61,6 +61,10 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     .catch(error => {
       // catch is always any-typed, nothing we can do here
     })
+
+  expectType<number>(await defaultDispatch(async(3, { unwrap: true })))
+  // typings:expect-error
+  expectType<Error>(await defaultDispatch(async(3, { unwrap: true })))
 })()
 
 // More complex usage of thunk args
@@ -135,6 +139,14 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   expectType<ReturnValue>(unwrapResult(returned))
   // typings:expect-error
   expectType<RejectValue>(unwrapResult(returned))
+
+  expectType<ReturnValue>(
+    await defaultDispatch(fetchBooksTAC(3, { unwrap: true }))
+  )
+  // typings:expect-error
+  expectType<RejectValue>(
+    await defaultDispatch(fetchBooksTAC(3, { unwrap: true }))
+  )
 })()
 
 {
@@ -214,6 +226,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   {
     const asyncThunk = createAsyncThunk('test', () => 0)
     expectType<() => any>(asyncThunk)
+
+    asyncThunk()
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
+
     // typings:expect-error cannot be called with an argument
     asyncThunk(0 as any)
   }
@@ -222,6 +240,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   {
     const asyncThunk = createAsyncThunk('test', (arg: undefined) => 0)
     expectType<() => any>(asyncThunk)
+
+    asyncThunk()
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
+
     // typings:expect-error cannot be called with an argument
     asyncThunk(0 as any)
   }
@@ -229,6 +253,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   // one argument, specified as void: asyncThunk has no argument
   {
     const asyncThunk = createAsyncThunk('test', (arg: void) => 0)
+
+    asyncThunk()
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
+
     expectType<() => any>(asyncThunk)
     // typings:expect-error cannot be called with an argument
     asyncThunk(0 as any)
@@ -242,6 +272,13 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     expectType<(arg?: number) => any>(asyncThunk)
     asyncThunk()
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk('5', { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
+
     // typings:expect-error
     asyncThunk('string')
   }
@@ -254,6 +291,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     expectType<(arg?: number) => any>(asyncThunk)
     asyncThunk()
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk('5', { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk('string')
   }
@@ -264,6 +307,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     expectType<(arg?: number) => any>(asyncThunk)
     asyncThunk()
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk('5', { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk('string')
   }
@@ -273,6 +322,10 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: any) => 0)
     expectType<IsAny<Parameters<typeof asyncThunk>[0], true, false>>(true)
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
@@ -282,6 +335,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: unknown) => 0)
     expectType<IsUnknown<Parameters<typeof asyncThunk>[0], true, false>>(true)
     asyncThunk(5)
+    // yup, undefined is also unknown
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
@@ -291,6 +349,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: number) => 0)
     expectType<(arg: number) => any>(asyncThunk)
     asyncThunk(5)
+    asyncThunk(5, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
@@ -299,6 +362,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   {
     const asyncThunk = createAsyncThunk('test', (arg: undefined, thunkApi) => 0)
     expectType<() => any>(asyncThunk)
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error cannot be called with an argument
     asyncThunk(0 as any)
   }
@@ -307,6 +375,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
   {
     const asyncThunk = createAsyncThunk('test', (arg: void, thunkApi) => 0)
     expectType<() => any>(asyncThunk)
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error cannot be called with an argument
     asyncThunk(0 as any)
   }
@@ -322,6 +395,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     expectType<(arg?: number) => any>(asyncThunk)
     asyncThunk()
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk('0', { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk('string')
   }
@@ -335,6 +414,12 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     expectType<(arg?: number) => any>(asyncThunk)
     asyncThunk()
     asyncThunk(5)
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk('0', { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk('string')
   }
@@ -344,6 +429,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: any, thunkApi) => 0)
     expectType<IsAny<Parameters<typeof asyncThunk>[0], true, false>>(true)
     asyncThunk(5)
+    // yup, undefined is any
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
@@ -353,6 +443,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: unknown, thunkApi) => 0)
     expectType<IsUnknown<Parameters<typeof asyncThunk>[0], true, false>>(true)
     asyncThunk(5)
+    // yup, undefined is unknown
+    asyncThunk(undefined, { unwrap: true })
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
@@ -362,6 +457,11 @@ const defaultDispatch = (() => {}) as ThunkDispatch<{}, any, AnyAction>
     const asyncThunk = createAsyncThunk('test', (arg: number, thunkApi) => 0)
     expectType<(arg: number) => any>(asyncThunk)
     asyncThunk(5)
+    asyncThunk(0, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: true })
+    // typings:expect-error
+    asyncThunk(undefined, { unwrap: false })
     // typings:expect-error
     asyncThunk()
   }
