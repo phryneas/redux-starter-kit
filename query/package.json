@@ -1,0 +1,19 @@
+{
+  "main": "dist/dist/query/index.js",
+  "module": "dist/dist/query/rtk-query.esm.js",
+  "unpkg": "dist/dist/query/rtk-query.umd.min.js",
+  "types": "./rtk-query.d.ts",
+  "typesVersions": {
+    ">=4.1": {
+      "rtk-query.d.ts": [
+        "../dist/query/index.d.ts"
+      ]
+    },
+    "<4.1": {
+      "rtk-query.d.ts": [
+        // TODO
+        "../dist/query/index.d.ts"
+      ]
+    }
+  }
+}

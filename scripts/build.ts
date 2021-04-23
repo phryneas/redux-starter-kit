@@ -107,13 +107,13 @@ const entryPoints: EntryPointOptions[] = [
   // TODO The alternate entry point outputs are likely not importable this way. Need to sort that out.
   {
     prefix: 'rtk-query',
-    folder: 'query',
+    folder: 'dist/query',
     entryPoint: 'src/query/index.ts',
     extractionConfig: 'api-extractor.query.json',
   },
   {
     prefix: 'rtk-query-react',
-    folder: 'query/react',
+    folder: 'dist/query/react',
     entryPoint: 'src/query/react.ts',
     extractionConfig: 'api-extractor.query-react.json',
   },
@@ -337,12 +337,6 @@ async function main({ skipExtraction = false, local = false }: BuildArgs) {
     )
     await Promise.all(bundlePromises)
     await writeEntry(folder, prefix)
-
-    if (folder) {
-      const packageSource = path.join('src', folder, 'package.json')
-      const packageDest = path.join(outputPath, 'package.json')
-      fs.copySync(packageSource, packageDest)
-    }
 
     await sleep(500) // hack, waiting file to save
     await buildUMD(outputPath, entryPoint.prefix)

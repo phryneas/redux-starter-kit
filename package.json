@@ -22,7 +22,7 @@
   "main": "dist/index.js",
   "module": "dist/redux-toolkit.esm.js",
   "unpkg": "dist/redux-toolkit.umd.min.js",
-  "types": "dist/index.d.ts",  
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -38,12 +38,6 @@
       "types": "./query/react.d.ts",
       "module": "./query/react/rtk-query-react.esm.js",
       "default": "./query/react/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "query": ["./query/index.d.ts"],
-      "query/react": ["./query/react.d.ts"]
     }
   },
   "author": "Mark Erikson <mark@isquaredsoftware.com>",
@@ -83,8 +77,8 @@
     "yargs": "^15.3.1"
   },
   "scripts": {
-    "build-ci": "rimraf dist query && tsc && node scripts/cli.js",
-    "build": "rimraf dist query && tsc && node scripts/cli.js --skipExtraction",
+    "build-ci": "rimraf dist && tsc && node scripts/cli.js",
+    "build": "rimraf dist && tsc && node scripts/cli.js --skipExtraction",
     "dev": "tsdx watch  --format cjs,esm,system,umd",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"**/*.md\"",
     "format:check": "prettier --list-different \"src/**/*.{ts,tsx}\" \"docs/*/**.md\"",
