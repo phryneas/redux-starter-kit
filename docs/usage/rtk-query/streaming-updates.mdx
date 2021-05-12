@@ -61,7 +61,7 @@ export const api = createApi({
       // highlight-start
       async onCacheEntryAdded(
         arg,
-        { dispatch },
+        { updateCacheEntry },
         { firstValueResolved, cleanup }
       ) {
         // create a websocket connection when the cache subscription starts
@@ -77,11 +77,9 @@ export const api = createApi({
             const data = JSON.parse(event.data)
             if (!isMessage(data) || data.channel !== arg) return
 
-            dispatch(
-              api.util.updateQueryResult('getMessages', arg, (draft) => {
-                draft.push(data)
-              })
-            )
+            updateCacheEntry((draft) => {
+              draft.push(data)
+            })
           }
 
           ws.addEventListener('message', listener)
@@ -156,7 +154,7 @@ export const api = createApi({
       // highlight-end
       async onCacheEntryAdded(
         arg,
-        { dispatch },
+        { updateCacheEntry },
         { firstValueResolved, cleanup }
       ) {
         const ws = new WebSocket('ws://localhost:8080')
@@ -167,13 +165,11 @@ export const api = createApi({
             const data = JSON.parse(event.data)
             if (!isMessage(data) || data.channel !== arg) return
 
-            dispatch(
-              api.util.updateQueryResult('getMessages', arg, (draft) => {
-                // highlight-start
-                messagesAdapter.upsertOne(draft, data)
-                // highlight-end
-              })
-            )
+            updateCacheEntry((draft) => {
+              // highlight-start
+              messagesAdapter.upsertOne(draft, data)
+              // highlight-end
+            })
           }
 
           ws.addEventListener('message', listener)
