@@ -62,9 +62,15 @@ describe('basic lifecycle', () => {
     endpoints: (build) => ({
       test: build.mutation({
         query: (x) => x,
-        onStart,
-        onError,
-        onSuccess,
+        async onQuery(_, api) {
+          onStart()
+          try {
+            await api.resultPromise
+            onSuccess()
+          } catch {
+            onError()
+          }
+        },
       }),
     }),
     overrideExisting: true,
