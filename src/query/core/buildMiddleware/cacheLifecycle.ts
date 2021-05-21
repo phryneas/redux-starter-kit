@@ -268,11 +268,11 @@ export const build: SubMiddlewareBuilder = ({
       const cacheEntryRemoved = new Promise<void>((resolve) => {
         lifecycle.cacheEntryRemoved = resolve
       })
-      const cacheDataLoaded = Promise.race([
-        new (Promise as PromiseConstructorWithKnownReason)<
-          { data: unknown },
-          typeof neverResolvedError
-        >((resolve) => {
+      const cacheDataLoaded: PromiseWithKnownReason<
+        { data: unknown },
+        typeof neverResolvedError
+      > = Promise.race([
+        new Promise<{ data: unknown }>((resolve) => {
           lifecycle.valueResolved = resolve
         }),
         cacheEntryRemoved.then(() => {
