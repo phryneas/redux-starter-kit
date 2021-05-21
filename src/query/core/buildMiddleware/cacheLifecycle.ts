@@ -9,7 +9,12 @@ import type {
   QueryResultSelectorResult,
 } from '../buildSelectors'
 import type { PatchCollection, Recipe } from '../buildThunks'
-import type { SubMiddlewareApi, SubMiddlewareBuilder } from './types'
+import type {
+  PromiseConstructorWithKnownReason,
+  PromiseWithKnownReason,
+  SubMiddlewareApi,
+  SubMiddlewareBuilder,
+} from './types'
 
 export type ReferenceCacheLifecycle = never
 
@@ -88,7 +93,15 @@ declare module '../../endpointDefinitions' {
      *
      * If you don't interact with this promise, it will not throw.
      */
-    cacheDataLoaded: Promise<ResultType>
+    cacheDataLoaded: PromiseWithKnownReason<
+      {
+        /**
+         * The (transformed) query result.
+         */
+        data: ResultType
+      },
+      typeof neverResolvedError
+    >
     /**
      * Promise that allows you to wait for the point in time when the cache entry
      * has been removed from the cache, by not being used/subscribed to any more
@@ -150,6 +163,12 @@ declare module '../../endpointDefinitions' {
   }
 }
 
+const neverResolvedError = new Error(
+  'Promise never resolved before cacheEntryRemoved.'
+) as Error & {
+  message: 'Promise never resolved before cacheEntryRemoved.'
+}
+
 export const build: SubMiddlewareBuilder = ({
   api,
   reducerPath,
@@ -163,7 +182,7 @@ export const build: SubMiddlewareBuilder = ({
 
   return (mwApi) => {
     type CacheLifecycle = {
-      valueResolved?(value: unknown): unknown
+      valueResolved?(value: { data: unknown }): unknown
       cacheEntryRemoved(): void
     }
     const lifecycleMap: Record<string, CacheLifecycle> = {}
@@ -201,7 +220,7 @@ export const build: SubMiddlewareBuilder = ({
       } else if (isFullfilledThunk(action)) {
         const lifecycle = lifecycleMap[cacheKey]
         if (lifecycle?.valueResolved) {
-          lifecycle.valueResolved(action.payload.result)
+          lifecycle.valueResolved({ data: action.payload.result })
           delete lifecycle.valueResolved
         }
       } else if (
@@ -244,16 +263,16 @@ export const build: SubMiddlewareBuilder = ({
       const onCacheEntryAdded = endpointDefinition?.onCacheEntryAdded
       if (!onCacheEntryAdded) return
 
-      const neverResolvedError = new Error(
-        'Promise never resolved before cacheEntryRemoved.'
-      )
       let lifecycle = {} as CacheLifecycle
 
       const cacheEntryRemoved = new Promise<void>((resolve) => {
         lifecycle.cacheEntryRemoved = resolve
       })
       const cacheDataLoaded = Promise.race([
-        new Promise<void>((resolve) => {
+        new (Promise as PromiseConstructorWithKnownReason)<
+          { data: unknown },
+          typeof neverResolvedError
+        >((resolve) => {
           lifecycle.valueResolved = resolve
         }),
         cacheEntryRemoved.then(() => {

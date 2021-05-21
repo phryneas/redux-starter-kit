@@ -99,7 +99,7 @@ describe('basic lifecycle', () => {
     expect(onSuccess).toHaveBeenCalledWith(
       'arg',
       expect.any(Object),
-      'success',
+      { data: 'success' },
       undefined
     )
   })
@@ -126,7 +126,7 @@ describe('basic lifecycle', () => {
     expect(onError).toHaveBeenCalledWith(
       'arg',
       expect.any(Object),
-      { message: 'error' },
+      { error: { message: 'error' }, isUnhandledError: true },
       undefined
     )
     expect(onSuccess).not.toHaveBeenCalled()
