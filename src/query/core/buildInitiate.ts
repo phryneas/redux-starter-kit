@@ -5,15 +5,19 @@ import type {
   QueryArgFrom,
   ResultTypeFrom,
 } from '../endpointDefinitions'
-import type { QueryThunkArg, MutationThunkArg } from './buildThunks'
+import type {
+  QueryThunkArg,
+  MutationThunkArg,
+  QueryThunk,
+  MutationThunk,
+} from './buildThunks'
 import type {
   AnyAction,
   AsyncThunk,
   ThunkAction,
-  SerializedError} from '@reduxjs/toolkit';
-import {
-  unwrapResult
+  SerializedError,
 } from '@reduxjs/toolkit'
+import { unwrapResult } from '@reduxjs/toolkit'
 import type { QuerySubState, SubscriptionOptions } from './apiState'
 import type { InternalSerializeQueryArgs } from '../defaultSerializeQueryArgs'
 import type { Api } from '../apiTypes'
@@ -109,10 +113,6 @@ export type MutationActionCreatorResult<
      * Whether the mutation is being tracked in the store.
      */
     track?: boolean
-    /**
-     * Timestamp for when the mutation was initiated
-     */
-    startedTimeStamp: number
   }
   /**
    * A unique string generated for the request sequence
@@ -187,8 +187,8 @@ export function buildInitiate({
   api,
 }: {
   serializeQueryArgs: InternalSerializeQueryArgs
-  queryThunk: AsyncThunk<any, QueryThunkArg, {}>
-  mutationThunk: AsyncThunk<any, MutationThunkArg, {}>
+  queryThunk: QueryThunk
+  mutationThunk: MutationThunk
   api: Api<any, EndpointDefinitions, any, any>
 }) {
   const {
@@ -218,7 +218,6 @@ export function buildInitiate({
         endpointName,
         originalArgs: arg,
         queryCacheKey,
-        startedTimeStamp: Date.now(),
       })
       const thunkResult = dispatch(thunk)
       const { requestId, abort } = thunkResult
@@ -267,30 +266,23 @@ export function buildInitiate({
     endpointName: string,
     definition: MutationDefinition<any, any, any, any>
   ): StartMutationActionCreator<any> {
-    return (arg, { track = true } = {}) => (dispatch, getState) => {
+    return (arg, { track = true } = {}) => (dispatch) => {
       const thunk = mutationThunk({
         endpointName,
         originalArgs: arg,
         track,
-        startedTimeStamp: Date.now(),
       })
       const thunkResult = dispatch(thunk)
       const { requestId, abort } = thunkResult
       const returnValuePromise = thunkResult
-        .then(unwrapResult)
-        .then((unwrapped) => ({
-          data: unwrapped.result,
-        }))
+        .unwrap()
+        .then((data) => ({ data }))
         .catch((error) => ({ error }))
       return Object.assign(returnValuePromise, {
         arg: thunkResult.arg,
         requestId,
         abort,
-        unwrap() {
-          return thunkResult
-            .then(unwrapResult)
-            .then((unwrapped) => unwrapped.result)
-        },
+        unwrap: thunkResult.unwrap,
         unsubscribe() {
           if (track) dispatch(unsubscribeMutationResult({ requestId }))
         },

@@ -850,7 +850,6 @@ describe('hooks tests', () => {
             endpointName: string
             originalArgs: { name: string }
             track?: boolean
-            startedTimeStamp: number
           }>(res.arg)
           expectType<string>(res.requestId)
           expectType<() => void>(res.abort)
