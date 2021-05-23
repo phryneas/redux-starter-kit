@@ -31,7 +31,9 @@ import {
 } from './apiState'
 import {
   calculateProvidedByThunk,
+  MutationThunk,
   MutationThunkArg,
+  QueryThunk,
   QueryThunkArg,
   ThunkResult,
 } from './buildThunks'
@@ -78,22 +80,8 @@ export function buildSlice({
   config,
 }: {
   reducerPath: string
-  queryThunk: AsyncThunk<
-    ThunkResult,
-    QueryThunkArg,
-    {
-      pendingMeta: { startedTimeStamp: number }
-      fulfilledMeta: { fulfilledTimeStamp: number }
-    }
-  >
-  mutationThunk: AsyncThunk<
-    ThunkResult,
-    MutationThunkArg,
-    {
-      pendingMeta: { startedTimeStamp: number }
-      fulfilledMeta: { fulfilledTimeStamp: number }
-    }
-  >
+  queryThunk: QueryThunk
+  mutationThunk: MutationThunk
   context: ApiContext<EndpointDefinitions>
   assertTagType: AssertTagTypes
   config: Omit<ConfigState<string>, 'online' | 'focused'>

@@ -356,7 +356,9 @@ export type AsyncThunkRejectedActionCreator<
     aborted: boolean
     condition: boolean
   } & (
-    | { rejectedWithValue: false }
+    | ({ rejectedWithValue: false } & {
+        [K in keyof GetRejectedMeta<ThunkApiConfig>]?: undefined
+      })
     | ({ rejectedWithValue: true } & GetRejectedMeta<ThunkApiConfig>)
   )
 >
