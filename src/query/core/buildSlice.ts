@@ -78,8 +78,22 @@ export function buildSlice({
   config,
 }: {
   reducerPath: string
-  queryThunk: AsyncThunk<ThunkResult, QueryThunkArg, {}>
-  mutationThunk: AsyncThunk<ThunkResult, MutationThunkArg, {}>
+  queryThunk: AsyncThunk<
+    ThunkResult,
+    QueryThunkArg,
+    {
+      pendingMeta: { startedTimeStamp: number }
+      fulfilledMeta: { fulfilledTimeStamp: number }
+    }
+  >
+  mutationThunk: AsyncThunk<
+    ThunkResult,
+    MutationThunkArg,
+    {
+      pendingMeta: { startedTimeStamp: number }
+      fulfilledMeta: { fulfilledTimeStamp: number }
+    }
+  >
   context: ApiContext<EndpointDefinitions>
   assertTagType: AssertTagTypes
   config: Omit<ConfigState<string>, 'online' | 'focused'>
@@ -108,7 +122,7 @@ export function buildSlice({
     },
     extraReducers(builder) {
       builder
-        .addCase(queryThunk.pending, (draft, { meta: { arg, requestId } }) => {
+        .addCase(queryThunk.pending, (draft, { meta, meta: { arg } }) => {
           if (arg.subscribe) {
             // only initialize substate if we want to subscribe to it
             draft[arg.queryCacheKey] ??= {
@@ -119,9 +133,9 @@ export function buildSlice({
 
           updateQuerySubstateIfExists(draft, arg.queryCacheKey, (substate) => {
             substate.status = QueryStatus.pending
-            substate.requestId = requestId
+            substate.requestId = meta.requestId
             substate.originalArgs = arg.originalArgs
-            substate.startedTimeStamp = arg.startedTimeStamp
+            substate.startedTimeStamp = meta.startedTimeStamp
           })
         })
         .addCase(queryThunk.fulfilled, (draft, { meta, payload }) => {
@@ -131,12 +145,9 @@ export function buildSlice({
             (substate) => {
               if (substate.requestId !== meta.requestId) return
               substate.status = QueryStatus.fulfilled
-              substate.data = copyWithStructuralSharing(
-                substate.data,
-                payload.result
-              )
+              substate.data = copyWithStructuralSharing(substate.data, payload)
               delete substate.error
-              substate.fulfilledTimeStamp = payload.fulfilledTimeStamp
+              substate.fulfilledTimeStamp = meta.fulfilledTimeStamp
             }
           )
         })
@@ -178,26 +189,26 @@ export function buildSlice({
       builder
         .addCase(
           mutationThunk.pending,
-          (draft, { meta: { arg, requestId } }) => {
+          (draft, { meta: { arg, requestId, startedTimeStamp } }) => {
             if (!arg.track) return
 
             draft[requestId] = {
               status: QueryStatus.pending,
               originalArgs: arg.originalArgs,
               endpointName: arg.endpointName,
-              startedTimeStamp: arg.startedTimeStamp,
+              startedTimeStamp,
             }
           }
         )
         .addCase(
           mutationThunk.fulfilled,
-          (draft, { payload, meta: { requestId, arg } }) => {
-            if (!arg.track) return
+          (draft, { payload, meta, meta: { requestId } }) => {
+            if (!meta.arg.track) return
 
             updateMutationSubstateIfExists(draft, { requestId }, (substate) => {
               substate.status = QueryStatus.fulfilled
-              substate.data = payload.result
-              substate.fulfilledTimeStamp = payload.fulfilledTimeStamp
+              substate.data = payload
+              substate.fulfilledTimeStamp = meta.fulfilledTimeStamp
             })
           }
         )

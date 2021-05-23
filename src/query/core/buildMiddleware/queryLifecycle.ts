@@ -171,7 +171,7 @@ export const build: SubMiddlewareBuilder = ({
         }
       } else if (isFullfilledThunk(action)) {
         const { requestId } = action.meta
-        lifecycleMap[requestId]?.resolve({ data: action.payload.result })
+        lifecycleMap[requestId]?.resolve({ data: action.payload })
         delete lifecycleMap[requestId]
       } else if (isRejectedThunk(action)) {
         const { requestId, rejectedWithValue } = action.meta
