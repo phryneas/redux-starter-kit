@@ -1,6 +1,4 @@
-import {
-  createAction,
-  nanoid,
+import type {
   PayloadAction,
   Middleware,
   Dispatch,
@@ -9,6 +7,7 @@ import {
   Action,
   ThunkDispatch,
 } from '@reduxjs/toolkit'
+import { createAction, nanoid } from '@reduxjs/toolkit'
 
 interface BaseActionCreator<P, T extends string, M = never, E = never> {
   type: T
@@ -74,7 +73,7 @@ type WhenFromOptions<O extends ActionListenerOptions> =
 export interface ActionListenerMiddlewareAPI<
   S,
   D extends Dispatch<AnyAction>,
-  O extends ActionListenerOptions
+  O extends ActionListenerOptions = never //remove
 > extends MiddlewareAPI<D, S> {
   getOriginalState: () => S
   unsubscribe(): void
@@ -91,7 +90,7 @@ export type ActionListener<
   A extends AnyAction,
   S,
   D extends Dispatch<AnyAction>,
-  O extends ActionListenerOptions
+  O extends ActionListenerOptions = never // TODO remove
 > = (action: A, api: ActionListenerMiddlewareAPI<S, D, O>) => void
 
 export interface ActionListenerOptions {
@@ -221,6 +220,50 @@ export const removeListenerAction = createAction(
 const defaultWhen: MiddlewarePhase = 'afterReducer'
 const actualMiddlewarePhases = ['beforeReducer', 'afterReducer'] as const
 
+type Unsubscribe = () => void
+
+type GuardedType<T> = T extends (x: any) => x is infer T ? T : never
+
+interface AddListenerFn<
+  S,
+  // TODO Carry through the thunk extra arg somehow?
+  D extends Dispatch<AnyAction> = ThunkDispatch<S, unknown, AnyAction>,
+  ExtraArgument = unknown
+> {
+  <C extends TypedActionCreator<any>>(
+    options: {
+      actionCreator: C
+      type?: never
+      matcher?: never
+      listener: ActionListener<ReturnType<C>, S, D>
+    } & ActionListenerOptions
+  ): Unsubscribe
+  <T extends string>(
+    options: {
+      actionCreator?: never
+      type: T
+      matcher?: never
+      listener: ActionListener<Action<T>, S, D>
+    } & ActionListenerOptions
+  ): Unsubscribe
+  <MA extends AnyAction, M extends MatchFunction<MA>>(
+    options: {
+      actionCreator?: never
+      type?: never
+      matcher: M
+      listener: ActionListener<GuardedType<M>, S, D>
+    } & ActionListenerOptions
+  ): Unsubscribe
+  <MA extends AnyAction, M extends ListenerPredicate<MA, S>>(
+    options: {
+      actionCreator?: never
+      type?: never
+      matcher: M
+      listener: ActionListener<AnyAction, S, D>
+    } & ActionListenerOptions
+  ): Unsubscribe
+}
+
 /**
  * @alpha
  */
@@ -249,11 +292,10 @@ export function createActionListenerMiddleware<
     D
   > = (api) => (next) => (action) => {
     if (addListenerAction.match(action)) {
-      const unsubscribe = addListener(
-        action.payload.type,
-        action.payload.listener,
-        action.payload.options
-      )
+      const unsubscribe = addListener({
+        ...action.payload,
+        ...action.payload.options,
+      })
 
       return unsubscribe
     }
@@ -305,73 +347,32 @@ export function createActionListenerMiddleware<
     }
   }
 
-  type Unsubscribe = () => void
-
-  type GuardedType<T> = T extends (x: any) => x is infer T ? T : never
-
-  function addListener<
-    C extends TypedActionCreator<any>,
-    O extends ActionListenerOptions
-  >(
-    actionCreator: C,
-    listener: ActionListener<ReturnType<C>, S, D, O>,
-    options?: O
-  ): Unsubscribe
-  // eslint-disable-next-line no-redeclare
-  function addListener<T extends string, O extends ActionListenerOptions>(
-    type: T,
-    listener: ActionListener<Action<T>, S, D, O>,
-    options?: O
-  ): Unsubscribe
-  // eslint-disable-next-line no-redeclare
-  function addListener<
-    MA extends AnyAction,
-    M extends MatchFunction<MA>,
-    O extends ActionListenerOptions
-  >(
-    matcher: M,
-    listener: ActionListener<GuardedType<M>, S, D, O>,
-    options?: O
-  ): Unsubscribe
-  // eslint-disable-next-line no-redeclare
-  function addListener<
-    MA extends AnyAction,
-    M extends ListenerPredicate<MA, S>,
-    O extends ActionListenerOptions
-  >(
-    matcher: M,
-    listener: ActionListener<AnyAction, S, D, O>,
-    options?: O
-  ): Unsubscribe
-  // eslint-disable-next-line no-redeclare
   function addListener(
-    typeOrActionCreator:
-      | string
-      | TypedActionCreator<any>
-      | ListenerPredicate<any, any>,
-    listener: ActionListener<AnyAction, S, D, any>,
-    options?: ActionListenerOptions
+    options: {
+      actionCreator?: TypedActionCreator<any>
+      type?: string
+      matcher?: ListenerPredicate<any, S>
+      listener: ActionListener<AnyAction, S, D>
+    } & ActionListenerOptions
   ): Unsubscribe {
     let predicate: ListenerPredicate<any, any>
     let type: string | undefined
+    const listener = options.listener
 
     let entry = findListenerEntry(
       (existingEntry) => existingEntry.listener === listener
     )
 
     if (!entry) {
-      if (typeof typeOrActionCreator === 'string') {
-        type = typeOrActionCreator
+      if (options.type) {
+        type = options.type
         predicate = (action: any) => action.type === type
       } else {
-        if (isActionCreator(typeOrActionCreator)) {
-          type = typeOrActionCreator.type
-          predicate = typeOrActionCreator.match
+        if (options.actionCreator) {
+          type = options.type
+          predicate = options.actionCreator.match
         } else {
-          predicate = typeOrActionCreator as unknown as ListenerPredicate<
-            any,
-            any
-          >
+          predicate = options.matcher!
         }
       }
 
@@ -444,10 +445,13 @@ export function createActionListenerMiddleware<
 
     const conditionSucceededPromise = new Promise<boolean>(
       (resolve, reject) => {
-        unsubscribe = addListener(predicate, (action, listenerApi) => {
-          // One-shot listener that cleans up as soon as the predicate resolves
-          listenerApi.unsubscribe()
-          resolve(true)
+        unsubscribe = addListener({
+          matcher: predicate,
+          listener: (action, listenerApi) => {
+            // One-shot listener that cleans up as soon as the predicate resolves
+            listenerApi.unsubscribe()
+            resolve(true)
+          },
         })
       }
     )
@@ -473,7 +477,10 @@ export function createActionListenerMiddleware<
 
   return Object.assign(
     middleware,
-    { addListener, removeListener },
+    {
+      addListener: addListener as AddListenerFn<S, D, ExtraArgument>,
+      removeListener,
+    },
     {} as WithMiddlewareType<typeof middleware>
   )
 }

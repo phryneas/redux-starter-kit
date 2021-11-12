@@ -1,16 +1,15 @@
+import type { AnyAction } from '@reduxjs/toolkit'
 import {
   configureStore,
   createAction,
   createSlice,
-  AnyAction,
   isAnyOf,
 } from '@reduxjs/toolkit'
+import type { When, ActionListenerMiddlewareAPI } from '../index'
 import {
   createActionListenerMiddleware,
   addListenerAction,
   removeListenerAction,
-  When,
-  ActionListenerMiddlewareAPI,
 } from '../index'
 
 const middlewareApi = {
